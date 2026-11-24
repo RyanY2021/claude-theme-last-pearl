@@ -48,14 +48,13 @@ const STYLE: ThemeStyle = {
   ToolUse: { backgroundColor: 'surface-1', borderColor: 'border', borderWidth: 1, radius: 8, paddingX: 10, paddingY: 4 },
 }
 
-// Sound: a low warm drone, a breath of air, and now and then a bell like a star coming out.
+// Sound: a low warm drone, and now and then a bell like a star coming out.
 // Cues ring in D major pentatonic; clicking the bare sky plays its notes left to right.
 const SOUND: ThemeSound = {
   ambience: {
     layers: [
       { wave: 'sine', notes: ['D3', 'A3'], drone: true, gain: 0.12, filter: { type: 'lowpass', hz: 500, to: 800 }, tremolo: { hz: 0.08, depth: 0.3 } },
       { wave: 'triangle', notes: ['F#4'], drone: true, gain: 0.04, filter: { type: 'lowpass', hz: 900 }, tremolo: { hz: 0.06, depth: 0.5 } },
-      { wave: 'pink', drone: true, gain: 0.035, filter: { type: 'lowpass', hz: 420 } },
       { wave: 'bell', notes: ['D5', 'E5', 'F#5', 'A5', 'B5', 'D6'], scatter: 0.07, gain: 0.1, attack: 0.01, release: 3 },
     ],
     reverb: 0.5,

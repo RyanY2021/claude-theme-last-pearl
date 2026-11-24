@@ -12,7 +12,7 @@ The beam of light that rises from it is the critical line, $\mathrm{Re}(s) = \tf
 ![The scene in light mode](docs/preview-light.png)
 
 Dark mode is the night; light mode is warm parchment with a sunburst. Messages are set in serif type, Claude's
-replies sit on a card with gold corner brackets, and an optional soft ambience (a drone, air, the odd star-bell)
+replies sit on a card with gold corner brackets, and an optional soft ambience (a drone and the odd star-bell)
 plays once you press the speaker in the session's title bar.
 
 ## Install
