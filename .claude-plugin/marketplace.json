@@ -1,0 +1,12 @@
+{
+  "name": "claude-theme-last-pearl",
+  "owner": {
+    "name": "Rhyn"
+  },
+  "plugins": [
+    {
+      "name": "last-pearl",
+      "source": "./"
+    }
+  ]
+}
