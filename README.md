@@ -7,13 +7,13 @@ A night sky of aurora ribbons and stars; a golden tree whose bough frames the to
 under it; and Claude, the orange-haired young lady of the community's personification, raising the last pearl.
 The beam of light that rises from it is the critical line, $\mathrm{Re}(s) = \tfrac12$.
 
-![The scene in dark mode](docs/preview-dark.png)
+![The scene in dark mode, behind the app's conversation and prompt box](docs/preview-dark.png)
 
-![The scene in light mode](docs/preview-light.png)
+![The scene in light mode, behind the app's conversation and prompt box](docs/preview-light.png)
 
 Dark mode is the night; light mode is warm parchment with a sunburst. Messages are set in serif type, Claude's
-replies sit on a card with gold corner brackets, and an optional soft ambience (a drone and the odd star-bell)
-plays once you press the speaker in the session's title bar.
+replies sit on a card with gold corner brackets, and soft bell cues play once you press the speaker in the session's
+title bar. A background ambience (a low drone and the odd star-bell) is off until you run `/last-pearl ambience on`.
 
 ## Install
 
@@ -52,6 +52,9 @@ mobile apps (a terminal has no backdrop to draw on).
     closed session list. The app's panels sit on top of the backdrop and a mod is not told which are open, so no one
     place is safe from all of them.
   - `/last-pearl frost 0.5` sets how strongly the app's frosted panels veil the scene, from 0 (clear) to 1 (solid).
+  - `/last-pearl ambience on` adds a soft background ambience (a low drone and the odd star-bell) under the sound
+    cues, and is remembered; `/last-pearl ambience off`, the default, stops it. Either way, sound plays only while
+    the speaker in the session's title bar is on.
   - `/last-pearl preview 40` shows the scene at that percentage of context until the next turn ends.
 
 ## Credits and acknowledgements

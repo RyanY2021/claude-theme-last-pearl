@@ -50,6 +50,7 @@ const STYLE: ThemeStyle = {
 
 // Sound: a low warm drone, and now and then a bell like a star coming out.
 // Cues ring in D major pentatonic; clicking the bare sky plays its notes left to right.
+// The ambience is off until the person asks for it (/last-pearl ambience on); the cues always come.
 const SOUND: ThemeSound = {
   ambience: {
     layers: [
@@ -70,11 +71,18 @@ const SOUND: ThemeSound = {
   },
 }
 
-// Where Claude stands (see art/traced.mjs) and how strongly the app's panels veil the backdrop.
-// Both are the person's to change with /last-pearl, and kept across sessions in the store.
+// Where Claude stands (see art/traced.mjs), how strongly the app's panels veil the backdrop, and
+// whether the ambience plays under the cues. All are the person's to change with /last-pearl, and
+// kept across sessions in the store.
 const DEFAULT_FROST = 0.5
 let place: Place = DEFAULT_PLACE
 let frost = DEFAULT_FROST
+let ambience = false
+
+// The sound to set: the cues, and the ambience only once the person has turned it on.
+function sound(): ThemeSound {
+  return ambience ? SOUND : { cues: SOUND.cues }
+}
 
 // How full the session's context is, 0 to 100, as the app last measured it: the fruit ripen and
 // the pearl's beam grows with it (gauge.ts). Unknown, in a fresh session or one just compacted,
@@ -100,7 +108,7 @@ function base(): ThemeSetArgs {
 // style), say why and set the look again without it.
 async function applyLook($: Parameters<Parameters<Parameters<Register>[0]>[2]>[0]) {
   const tries: [string, ThemeSetArgs][] = [
-    ['full', { ...base(), style: STYLE, sound: SOUND }],
+    ['full', { ...base(), style: STYLE, sound: sound() }],
     ['without sound', { ...base(), style: STYLE }],
     ['without style or sound', base()],
   ]
@@ -127,7 +135,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'last-pearl',
       description:
-        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "right" or "left" moves Claude (right stays clear of the session list; left is larger, for a closed list), "frost 0.5" sets how strongly panels veil the scene (0 to 1), "preview 60" shows the scene at that percent of context until the next turn ends',
+        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "right" or "left" moves Claude (right stays clear of the session list; left is larger, for a closed list), "frost 0.5" sets how strongly panels veil the scene (0 to 1), "ambience on" or "ambience off" plays or stops the soft drone and bells under the sound cues (off at first), "preview 60" shows the scene at that percent of context until the next turn ends',
     })
     const savedPlace = await $.store.get('place')
     if (isPlace(savedPlace)) {
@@ -136,6 +144,10 @@ export const register: Register = on => {
     const savedFrost = await $.store.get('frost')
     if (typeof savedFrost === 'number' && savedFrost >= 0 && savedFrost <= 1) {
       frost = savedFrost
+    }
+    const savedAmbience = await $.store.get('ambience')
+    if (typeof savedAmbience === 'boolean') {
+      ambience = savedAmbience
     }
     // a line left by an earlier load, from before the app had attached, would otherwise stay
     $.ui.status(undefined)
@@ -182,6 +194,19 @@ export const register: Register = on => {
       await applyLook($)
       return { text: `Frost is now ${frost}.` }
     }
+    if (word === 'ambience') {
+      if (value !== 'on' && value !== 'off') {
+        return { text: `The ambience is ${ambience ? 'on' : 'off'}. Use /last-pearl ambience on or /last-pearl ambience off. The sound cues play either way, once the speaker in the title bar is on.` }
+      }
+      ambience = value === 'on'
+      await $.store.set('ambience', ambience)
+      await applyLook($)
+      return {
+        text: ambience
+          ? 'The ambience is on: a low drone, and now and then a bell, under the sound cues. It plays while the speaker in the title bar is on.'
+          : 'The ambience is off. The sound cues still play while the speaker in the title bar is on.',
+      }
+    }
     if (word === 'preview') {
       const percent = Number(value)
       if (value === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) {
@@ -194,7 +219,7 @@ export const register: Register = on => {
       return { text: `Showing the scene at ${percent}% of context until the next turn ends. The session's own is ${fill === undefined ? 'not measured yet' : `${fill}%`}.` }
     }
     if (word !== '') {
-      return { text: 'Use /last-pearl, or /last-pearl off, right, left, frost followed by a number from 0 to 1, or preview followed by a percentage.' }
+      return { text: 'Use /last-pearl, or /last-pearl off, right, left, frost followed by a number from 0 to 1, ambience on or off, or preview followed by a percentage.' }
     }
     const set = await applyLook($)
     return { text: set?.isDrawn ? 'The Last Pearl is set.' : `The Last Pearl is set, but nothing draws it here${set && !set.isDrawn ? `: ${set.reason}` : '.'}` }
