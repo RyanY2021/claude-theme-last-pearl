@@ -2,7 +2,7 @@
 // Dark mode is the night sky of the film; light mode is the 1859 manuscript parchment.
 import type { ThemeColors } from 'claude-code'
 
-import { makeColors } from './make-colors.js'
+import { checkColors, makeColors } from './make-colors.js'
 
 const made = makeColors({
   label: 'The Last Pearl',
@@ -56,15 +56,26 @@ const MESSAGE_COLORS = {
   },
 } as const
 
+// In light mode the design system's warning fill is a pale gold, close to the parchment page: the
+// app's subscription usage ring, drawn in it once usage is high, was hard to make out (1.4:1). These two
+// steps are set deeper by hand: 2.5:1 on the page, and the dark text the app sets on the fill still
+// reads at 5:1. checkColors below confirms the result paints.
+const WARNING_FILL = {
+  light: {
+    'role-warning-fill': '#b8860b',
+    'role-warning-fill-hover': '#c69320',
+  },
+} as const
+
 const inputs = made.theme.inputs as Record<'light' | 'dark', Record<string, string>>
 
 export const COLORS: ThemeColors = {
   ...made.theme,
   inputs: {
     ...made.theme.inputs,
-    light: { ...inputs.light, ...MESSAGE_COLORS.light },
+    light: { ...inputs.light, ...MESSAGE_COLORS.light, ...WARNING_FILL.light },
     dark: { ...inputs.dark, ...MESSAGE_COLORS.dark },
   },
 } as ThemeColors
 
-export const COLOR_PROBLEMS = made.problems
+export const COLOR_PROBLEMS = checkColors(COLORS)
