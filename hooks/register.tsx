@@ -5,7 +5,7 @@ import type { EngineInterface, Register, ThemeSetArgs, ThemeSound, ThemeStyle } 
 
 import { COLOR_PROBLEMS, COLORS } from './palette.ts'
 import { gaugeCss } from './gauge.ts'
-import { DEFAULT_PLACE, FRUIT_COUNT, isPlace, type Place, scene } from './scene.ts'
+import { FRUIT_COUNT, scene } from './scene.ts'
 
 const SCENE_NAME = 'last-pearl'
 const GOLD = '#d9a441'
@@ -71,14 +71,12 @@ const SOUND: ThemeSound = {
   },
 }
 
-// Where Claude stands (see art/traced.mjs), how strongly the app's panels veil the backdrop,
-// whether the ambience plays under the cues, and how far the scene's planes sway (the parallax: a
-// multiple of the distances drawn, 0 for still). All are the person's to change with /last-pearl,
-// and kept across sessions in the store.
+// How strongly the app's panels veil the backdrop, whether the ambience plays under the cues, and
+// how far the scene's planes sway (the parallax: a multiple of the distances drawn, 0 for still).
+// All are the person's to change with /last-pearl, and kept across sessions in the store.
 const DEFAULT_FROST = 0.5
 const DEFAULT_PARALLAX = 1
 const MAX_PARALLAX = 3
-let place: Place = DEFAULT_PLACE
 let frost = DEFAULT_FROST
 let ambience = false
 let parallax = DEFAULT_PARALLAX
@@ -114,12 +112,8 @@ function sound(): ThemeSound {
 let fill: number | undefined
 let shown: number | undefined
 
-const ALT: Record<Place, string> = {
-  right:
-    'A starry night framed by a golden tree whose bough reaches across the top, glowing orange fruit hanging under it. At the bottom right stands Claude, a girl with long flowing orange hair and a blank face, raising a glowing pearl whose beam of light rises to the top of the sky. The fruit ripen and the beam brightens as the context of the session fills.',
-  left:
-    'A starry night framed by a golden tree, its trunk on the right and its bough across the top, glowing orange fruit hanging under it. At the bottom left stands Claude, a girl with long flowing orange hair and a blank face, raising a glowing pearl whose beam of light rises to the top of the sky. The fruit ripen and the beam brightens as the context of the session fills.',
-}
+const ALT =
+  'A starry night framed by a golden tree whose bough reaches across the top, glowing orange fruit hanging under it. At the bottom right, large and seen from the waist up, is Claude, a girl with long flowing orange hair and a blank face, raising a glowing pearl whose beam of light rises to the top of the sky. The fruit ripen and the beam brightens as the context of the session fills.'
 
 function base(): ThemeSetArgs {
   return {
@@ -159,12 +153,8 @@ export const register: Register = on => {
     await $.command.register({
       name: 'last-pearl',
       description:
-        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "right" or "left" moves Claude (right stays clear of the session list; left is larger, for a closed list), "frost 0.5" sets how strongly panels veil the scene (0 to 1), "ambience on" or "ambience off" plays or stops the soft drone and bells under the sound cues (off at first), "parallax 1" sets how far the layers of the scene sway from side to side (0, still, to 3), "preview 60" shows the scene at that percent of context until the next turn ends',
+        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "frost 0.5" sets how strongly panels veil the scene (0 to 1), "ambience on" or "ambience off" plays or stops the soft drone and bells under the sound cues (off at first), "parallax 1" sets how far the layers of the scene sway from side to side (0, still, to 3), "preview 60" shows the scene at that percent of context until the next turn ends',
     })
-    const savedPlace = await $.store.get('place')
-    if (isPlace(savedPlace)) {
-      place = savedPlace
-    }
     const savedFrost = await $.store.get('frost')
     if (typeof savedFrost === 'number' && savedFrost >= 0 && savedFrost <= 1) {
       frost = savedFrost
@@ -200,17 +190,6 @@ export const register: Register = on => {
     if (word === 'off') {
       await $.theme.clear()
       return { text: 'The Last Pearl is put away. Run /last-pearl to raise it again.' }
-    }
-    if (isPlace(word)) {
-      place = word
-      await $.store.set('place', place)
-      $.ui.invalidate('ui.render')
-      return {
-        text:
-          place === 'right'
-            ? 'Claude stands at the bottom right, clear of the session list; the tree turns to keep its bough over her.'
-            : 'Claude stands large at the bottom left, the trunk on the right. An open session list covers her there.',
-      }
     }
     if (word === 'frost') {
       const amount = Number(value)
@@ -262,7 +241,7 @@ export const register: Register = on => {
       return { text: `Showing the scene at ${percent}% of context until the next turn ends. The session's own is ${fill === undefined ? 'not measured yet' : `${fill}%`}.` }
     }
     if (word !== '') {
-      return { text: 'Use /last-pearl, or /last-pearl off, right, left, frost followed by a number from 0 to 1, ambience on or off, parallax followed by a number from 0 to 3, or preview followed by a percentage.' }
+      return { text: 'Use /last-pearl, or /last-pearl off, frost followed by a number from 0 to 1, ambience on or off, parallax followed by a number from 0 to 3, or preview followed by a percentage.' }
     }
     const set = await applyLook($)
     return { text: set?.isDrawn ? 'The Last Pearl is set.' : `The Last Pearl is set, but nothing draws it here${set && !set.isDrawn ? `: ${set.reason}` : '.'}` }
@@ -273,13 +252,13 @@ export const register: Register = on => {
       return next(e)
     }
     const gauge = gaugeCss(shown ?? fill, FRUIT_COUNT)
-    const key = `${place} ${parallax} ${gauge}`
+    const key = `${parallax} ${gauge}`
     let timed = drawn.get(e.surface)
     if (timed?.key !== key) {
       timed = { key, at: await $.clock.now() }
       drawn.set(e.surface, timed)
     }
     const { Svg } = $.ui.resolve(e)
-    return <Svg source={scene(place, gauge + swayCss(parallax, timed.at))} alt={ALT[place]} isInteractive />
+    return <Svg source={scene(gauge + swayCss(parallax, timed.at))} alt={ALT} isInteractive />
   })
 }

@@ -62,6 +62,13 @@ ap.add_argument("--detail-thin", type=float, default=1.0)
 ap.add_argument("--detail-min-area", type=int, default=20)
 ap.add_argument("--blank", default=None, help="X0,Y0,X1,Y1 in source pixels: a blank face. Inside the box only the palest colour and the --blank-keep colours stay, and islands of those inside the face are filled")
 ap.add_argument("--blank-keep", default="", help="comma-separated output colours that survive inside --blank (her hair)")
+ap.add_argument("--fringe", type=float, default=0, help="px: a pixel that is a blend of two palette colours, both found solid within this distance, takes the nearer of them, not a third colour that happens to lie near the blend (the soft edge between orange and cream read as gold); 0 = off. Lets --thin and --min-area be light, so true thin lines stay")
+ap.add_argument("--tracer", choices=("vtracer", "potrace"), default="vtracer", help="potrace fits fewer, smoother curves (needs --with potracer)")
+ap.add_argument("--alphamax", type=float, default=1.0, help="potrace: how readily corners are rounded (0 sharp, 1.33 none)")
+ap.add_argument("--opttolerance", type=float, default=0.2, help="potrace: how far joined curves may stray (px); larger = fewer curves")
+ap.add_argument("--edge", default=None, help="X0,Y0>X1,Y1;... in source pixels: the light-mode ink edge also runs inside the figure, along the border of the --edge-of colours from about the first point to about the second (where one part, her raised sleeve, lies over another)")
+ap.add_argument("--edge-of", default=None, help="comma-separated output colours whose border --edge follows; default: the bottom layer's")
+ap.add_argument("--keep", default=None, help="X0,Y0,X1,Y1 in source pixels: trace only this part of the figure (the part the scene ever shows); the frame, the pearl and the size stay the whole figure's")
 args = ap.parse_args()
 stem = args.dst[:-4] if args.dst.endswith(".svg") else args.dst
 
@@ -131,6 +138,38 @@ px = oklab(np.asarray(rgb_img))
 pal = oklab(np.array(sources))
 d2 = ((px[:, :, None, :] - pal[None, None, :, :]) ** 2).sum(-1)
 lab = np.array(out_of)[d2.argmin(-1)]
+if args.fringe > 0:
+    # Soft edges: where two colour blocks meet, the picture blends them over a pixel or two, and
+    # the blend can lie nearer a third palette colour than either (orange and cream make a gold).
+    # A pixel lying near the line between two palette colours, nearer than to any one colour, and
+    # with both of them solid close by, is such a blend: it takes whichever of the two it is nearer.
+    near = d2.min(-1)
+    solid = near < np.percentile(near[~bgmask], 60)
+    found = {}
+    for L in range(N):
+        m = solid & (lab == L) & ~bgmask
+        found[L] = ndi.binary_dilation(m, structure=disc(args.fringe)) if m.any() else m
+    best = np.full(lab.shape, np.inf)
+    pick = lab.copy()
+    for i in range(len(sources)):
+        for j in range(i + 1, len(sources)):
+            Li, Lj = out_of[i], out_of[j]
+            if Li == Lj:
+                continue
+            v = pal[j] - pal[i]
+            al = np.clip(((px - pal[i]) * v).sum(-1) / (v * v).sum(), 0, 1)
+            seg = ((px - pal[i] - al[..., None] * v) ** 2).sum(-1)
+            ok = (seg < best) & (al > 0.12) & (al < 0.88) & found[Li] & found[Lj]
+            best = np.where(ok, seg, best)
+            pick = np.where(ok, np.where(al < 0.5, Li, Lj), pick)
+    # a colour found solid nearby stays unless the blend explains the pixel far better; a lone
+    # one (a gold speck on the edge between orange hair and a cream face) goes to the blend
+    alone = np.zeros(lab.shape, bool)
+    for L in range(N):
+        alone |= (lab == L) & ~found[L]
+    blend = (best < 0.45 * near) | (alone & (best < near))
+    print(f"fringe: {int((blend & (pick != lab) & ~bgmask).sum())} blended edge pixels given to a neighbour")
+    lab = np.where(blend, pick, lab)
 lab[bgmask] = BG
 if args.blank:
     # a blank face: within the box everything but hair goes to the palest colour, and so do
@@ -298,8 +337,14 @@ pad = 3
 y0, x0 = max(0, ys.min() - pad), max(0, xs.min() - pad)
 y1, x1 = min(h, ys.max() + 1 + pad), min(w, xs.max() + 1 + pad)
 lab = lab[y0:y1, x0:x1]
-fig = lab != BG
 H, W = lab.shape
+if args.keep:
+    kx0, ky0, kx1, ky1 = [round(float(v) * args.scale) for v in args.keep.split(",")]
+    cut = np.ones(lab.shape, bool)
+    cut[max(0, ky0 - y0):max(0, ky1 - y0), max(0, kx0 - x0):max(0, kx1 - x0)] = False
+    pearl_lab = lab.copy()
+    lab[cut] = BG
+fig = lab != BG
 flat = np.zeros((H, W, 4), np.uint8)
 for L in range(N):
     flat[lab == L] = hex3(outputs[L]) + [255]
@@ -307,7 +352,7 @@ Image.fromarray(flat, "RGBA").save(stem + ".flat.png")
 
 pearl = None
 if args.tip:
-    ay, ax = np.where(fig)
+    ay, ax = np.where((pearl_lab if args.keep else lab) != BG)
     topy = ay.min()
     k = 14.0 * args.scale
     pearl = [float(ax[ay < topy + 5].mean()), float(topy) - k, k]
@@ -372,9 +417,28 @@ def minify(d, tx, ty):
     return re.sub(r" -", "-", "".join(out))
 
 
+def trace_potrace(mask):
+    import potrace
+    # potracer fills what is dark: hand it the mask with the figure as False
+    curves = potrace.Bitmap(~mask).trace(turdsize=args.speckle, alphamax=args.alphamax, opticurve=True, opttolerance=args.opttolerance)
+    f = lambda p: f"{p.x:.3f} {p.y:.3f}"
+    d = []
+    for c in curves:
+        d.append("M" + f(c.start_point))
+        for s in c.segments:
+            if s.is_corner:
+                d.append("L" + f(s.c) + "L" + f(s.end_point))
+            else:
+                d.append("C" + f(s.c1) + " " + f(s.c2) + " " + f(s.end_point))
+        d.append("Z")
+    return minify(" ".join(d), 0, 0)
+
+
 def trace(mask):
     if not mask.any():
         return ""
+    if args.tracer == "potrace":
+        return trace_potrace(mask)
     png, svg = os.path.join(tmp, "m.png"), os.path.join(tmp, "m.svg")
     Image.fromarray(np.where(mask, 0, 255).astype(np.uint8)).convert("RGB").save(png)
     vtracer.convert_image_to_svg_py(
@@ -437,20 +501,90 @@ for i, L in enumerate(order):
         mask = ndi.binary_dilation(mask, structure=grow) & fig
     layers.append({"fill": outputs[L], "d": trace(mask)})
 
+# ---- 5. inner edges: the ink edge's continuation along a border inside the figure, as open curves
+edge = None
+if args.edge:
+    import potrace
+    of = [outputs.index("#" + c.strip().lstrip("#").lower()) for c in args.edge_of.split(",")] if args.edge_of else [order[0]]
+    region = np.isin(lab, of)
+    curves = []
+    for c in potrace.Bitmap(~region).trace(turdsize=args.speckle, alphamax=args.alphamax, opticurve=True, opttolerance=args.opttolerance):
+        segs, p = [], (c.start_point.x, c.start_point.y)
+        for s in c.segments:
+            e = (s.end_point.x, s.end_point.y)
+            if s.is_corner:
+                for q0, q1 in ((p, (s.c.x, s.c.y)), ((s.c.x, s.c.y), e)):
+                    segs.append([q0, tuple(q0[k] + (q1[k] - q0[k]) / 3 for k in (0, 1)), tuple(q0[k] + 2 * (q1[k] - q0[k]) / 3 for k in (0, 1)), q1])
+            else:
+                segs.append([p, (s.c1.x, s.c1.y), (s.c2.x, s.c2.y), e])
+            p = e
+        curves.append(segs)
+
+    def at(sg, t):
+        u = 1 - t
+        return tuple(u ** 3 * sg[0][k] + 3 * u * u * t * sg[1][k] + 3 * u * t * t * sg[2][k] + t ** 3 * sg[3][k] for k in (0, 1))
+
+    def split(sg, t):
+        lerp = lambda a, b: (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+        a, b, c = lerp(sg[0], sg[1]), lerp(sg[1], sg[2]), lerp(sg[2], sg[3])
+        d, e = lerp(a, b), lerp(b, c)
+        m = lerp(d, e)
+        return [sg[0], a, d, m], [m, e, c, sg[3]]
+
+    def nearest(segs, pt):
+        best = None
+        for i, sg in enumerate(segs):
+            for j in range(41):
+                q = at(sg, j / 40)
+                dd = (q[0] - pt[0]) ** 2 + (q[1] - pt[1]) ** 2
+                if best is None or dd < best[0]:
+                    best = (dd, i + j / 40)
+        return best
+
+    parts = []
+    for pair in args.edge.split(";"):
+        a, b = [[float(v) * args.scale - o for v, o in zip(xy.split(","), (x0, y0))] for xy in pair.split(">")]
+        segs = min(curves, key=lambda sg: max(nearest(sg, a)[0], nearest(sg, b)[0]))
+        fa, fb = sorted((nearest(segs, a)[1], nearest(segs, b)[1]))
+        n_ = len(segs)
+        # the shorter way round the closed curve from one point to the other
+        if fb - fa > n_ / 2:
+            fa, fb = fb, fa + n_
+        run, f = [], fa
+        while f < fb - 1e-9:
+            i = int(f) % n_
+            t0, t1 = f - int(f), min(1.0, fb - int(f))
+            sg = segs[i]
+            if t1 < 1.0:
+                sg = split(sg, t1)[0]
+                t0 = t0 / t1
+            if t0 > 0:
+                sg = split(sg, t0)[1]
+            run.append(sg)
+            f = int(f) + 1.0
+        fmt = lambda q: f"{q[0]:.3f} {q[1]:.3f}"
+        parts.append("M" + fmt(run[0][0]) + "".join("C" + " ".join(fmt(q) for q in sg[1:]) for sg in run))
+    edge = minify(" ".join(parts), 0, 0)
+    print(f"inner edges: {len(parts)}, {len(edge)} characters")
+
 size = sum(len(l["d"]) for l in layers)
 with open(stem + ".json", "w") as fh:
-    meta = {"width": W, "height": H, "pearl": pearl, "layers": layers}
+    meta = {"width": W, "height": H, "scale": args.scale, "pearl": pearl, "layers": layers}
     if blobs is not None:
         meta["fruits"] = blobs
         if args.round_fruit:
             meta["fruitFill"] = "#" + args.blobs.strip().lstrip("#").lower()
     if flower:
         meta["flower"] = flower
+    if edge:
+        meta["edge"] = edge
     json.dump(meta, fh)
 with open(args.dst, "w") as fh:
     fh.write(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">')
     for l in layers:
         fh.write(f'<path fill="{l["fill"]}" fill-rule="evenodd" d="{l["d"]}"/>')
+    if edge:
+        fh.write(f'<path fill="none" stroke="#8a6a4e" stroke-width="{3 * args.scale:g}" stroke-linecap="round" d="{edge}"/>')
     fh.write("</svg>")
 print(f"{args.dst}: {W}x{H}, {len(layers)} layers, {size} characters of path data")
 for l in layers:

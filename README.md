@@ -39,7 +39,11 @@ mobile apps (a terminal has no backdrop to draw on).
 ## What it does
 
 - **The scene** is drawn behind the conversation, with slow motion: twinkling stars, drifting leaves, a turning
-  sunburst behind the pearl.
+  sunburst behind the pearl. Claude stands large in the bottom right corner, seen from the waist up, her raised arm
+  and the pearl beside the conversation and her hair running on behind it; the tree's trunk rises at the left edge
+  and its bough reaches across the top to her. The app's panels sit on top of the backdrop and a mod is not told
+  which are open: the side pane covers her while it is open, and with the session list open in a narrower window,
+  the conversation's edge reaches her raised arm.
 - **It shows how full the session's context is**, on a scale that is full at 60%.
   - The tree's fruit start pale and unlit and ripen one by one, from the foot of the trunk outward along the bough,
     about 4% of context each. A tree of all-orange, glowing fruit means the context has reached 60%.
@@ -48,11 +52,6 @@ mobile apps (a terminal has no backdrop to draw on).
   - The app measures after each turn; a fresh session, or one just compacted, draws as empty until its next reply.
 - **Commands**
   - `/last-pearl` sets the theme again; `/last-pearl off` clears it.
-  - `/last-pearl right` (the default) or `/last-pearl left` moves Claude, and is remembered. On the right she stands
-    in the margin beside the conversation, whole whether the session list is open or closed, with the tree's trunk
-    on the left. On the left she stands large in the bottom corner with the trunk on the right, which suits a
-    closed session list. The app's panels sit on top of the backdrop and a mod is not told which are open, so no one
-    place is safe from all of them.
   - `/last-pearl frost 0.5` sets how strongly the app's frosted panels veil the scene, from 0 (clear) to 1 (solid).
   - `/last-pearl ambience on` adds a soft background ambience (a low drone and the odd star-bell) under the sound
     cues, and is remembered; `/last-pearl ambience off`, the default, stops it. Either way, sound plays only while
@@ -77,7 +76,9 @@ This theme stands on other people's work, and it is offered with thanks to them.
 - **The fan artists on Bilibili** whose drawings of the character served as visual references while the theme was
   being worked out. None of their work is included.
 - **Tools.** The figure and the tree were drawn by OpenAI's GPT Image from the prompts in
-  [`art/PROMPTS.md`](art/PROMPTS.md), then traced to vector with [vtracer](https://github.com/visioncortex/vtracer).
+  [`art/PROMPTS.md`](art/PROMPTS.md). The tree was traced to vector with [vtracer](https://github.com/visioncortex/vtracer);
+  Claude was redrawn as vector by GPT from her picture, and her outline traced with
+  [potrace](https://potrace.sourceforge.net/) (through its Python port [potracer](https://github.com/tatarize/potrace)).
   The label is written by LaTeX in the Jana Skrivana hand from the `aurical` package and outlined with dvisvgm.
   The palette comes from `make-colors.js`, part of Claude Code's plugin-authoring skill. The theme was built with
   Claude, in Claude Code.
@@ -98,10 +99,12 @@ is traced or drawn as paths.
 
 - `hooks/register.tsx` sets the theme (colours, backdrop, message style, sound), draws the backdrop and answers
   `/last-pearl`. `hooks/gauge.ts` turns a context percentage into the style that ripens the fruit and grows the beam.
-  `hooks/scene.ts` is generated: the scene, with markers for the two placements and the gauge.
-- `art/vector/*.json` hold the traced figure and tree and the outlined label. `art/trace.py` made the first two from
-  the generated pictures (which are not in this repository), and `art/equation.py` the third.
-- `node art/build-scene.mjs` composes the scene from those and writes `hooks/scene.ts`, with previews in
-  `art/scene-right.svg` and `art/scene-left.svg` (`node art/build-scene.mjs 35` draws them at 35% of context).
+  `hooks/scene.ts` is generated: the scene, with a marker for the gauge.
+- `art/vector/*.json` hold the figure (GPT's vector drawing of her, from her hand to the skirt, the part the window
+  shows), the traced tree and the outlined label. `art/figure_svg.py` fitted the figure to the scene (with
+  `art/curves.py`), `art/trace.py` traced the tree from its generated picture (neither source is in this
+  repository), and `art/equation.py` made the label.
+- `node art/build-scene.mjs` composes the scene from those and writes `hooks/scene.ts`, with a preview in
+  `art/scene.svg` (`node art/build-scene.mjs 35` draws it at 35% of context).
   It needs Node 23.6 or later, and stops if the scene is over the limit.
 - `uv run --with svgpathtools python art/equation.py` rewrites the label; it needs TeX Live's `latex` and `dvisvgm`.

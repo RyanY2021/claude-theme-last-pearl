@@ -1,7 +1,8 @@
 # The prompts behind the art
 
 The figure and the tree in the scene were drawn by OpenAI's GPT Image from the prompts below (each a first
-render plus one edit), then traced to vector by `trace.py`. They are kept here as a record of how the art was
+render plus one edit). The tree was then traced to vector by `trace.py`; the figure was redrawn as vector by GPT
+from the picture (an SVG in the picture's own pixels) and fitted to the scene by `figure_svg.py`. They are kept here as a record of how the art was
 made, and for anyone who wants to make a variant.
 
 Each prompt was given with a few reference images attached. Those images are **not** in this repository, because
