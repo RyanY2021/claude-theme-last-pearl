@@ -1,7 +1,7 @@
 // The Last Pearl: a theme for the Claude desktop and mobile apps.
 // Night navy and candle gold in the cut-paper silhouette style, anchored on Claude
 // (orange hair, blank face) raising the last pearl, whose beam is the critical line.
-import type { Register, ThemeSetArgs, ThemeSound, ThemeStyle } from 'claude-code'
+import type { EngineInterface, Register, ThemeSetArgs, ThemeSound, ThemeStyle } from 'claude-code'
 
 import { COLOR_PROBLEMS, COLORS } from './palette.ts'
 import { gaugeCss } from './gauge.ts'
@@ -71,13 +71,37 @@ const SOUND: ThemeSound = {
   },
 }
 
-// Where Claude stands (see art/traced.mjs), how strongly the app's panels veil the backdrop, and
-// whether the ambience plays under the cues. All are the person's to change with /last-pearl, and
-// kept across sessions in the store.
+// Where Claude stands (see art/traced.mjs), how strongly the app's panels veil the backdrop,
+// whether the ambience plays under the cues, and how far the scene's planes sway (the parallax: a
+// multiple of the distances drawn, 0 for still). All are the person's to change with /last-pearl,
+// and kept across sessions in the store.
 const DEFAULT_FROST = 0.5
+const DEFAULT_PARALLAX = 1
+const MAX_PARALLAX = 3
 let place: Place = DEFAULT_PLACE
 let frost = DEFAULT_FROST
 let ambience = false
+let parallax = DEFAULT_PARALLAX
+
+// The parallax: the scene's planes (sky, tree, clouds, Claude) ride one slow swing from side to
+// side, 24 seconds each way, the nearer ones further (the "par" animation in the scene's style;
+// art/traced.mjs has the distances). This is the style that sets how far they go and where in
+// the swing they are at `nowMs`. The app draws the scene afresh whenever its text changes, each
+// animation from its start, so without the second part every plane would jump back to one end
+// of its swing each time the context's fill moved. art/build-scene.mjs leaves room for the
+// longest this gets (SWAY_ROOM).
+const SWING_MS = 48_000
+function swayCss(strength: number, nowMs: number): string {
+  if (strength === 0) {
+    return '.par{animation:none}'
+  }
+  const into = ((nowMs % SWING_MS) / 1000).toFixed(1)
+  return `.par{${strength === 1 ? '' : `--p:${strength};`}animation-delay:-${into}s}`
+}
+
+// What the scene was last drawn from on each surface, and the moment its swing was timed at. A
+// redraw asked for with nothing changed gets the same text back, so the app has nothing to draw afresh.
+const drawn = new Map<string, { key: string; at: number }>()
 
 // The sound to set: the cues, and the ambience only once the person has turned it on.
 function sound(): ThemeSound {
@@ -106,7 +130,7 @@ function base(): ThemeSetArgs {
 
 // Set the whole look; where this build refuses a part (an older one may not take sound or
 // style), say why and set the look again without it.
-async function applyLook($: Parameters<Parameters<Parameters<Register>[0]>[2]>[0]) {
+async function applyLook($: EngineInterface) {
   const tries: [string, ThemeSetArgs][] = [
     ['full', { ...base(), style: STYLE, sound: sound() }],
     ['without sound', { ...base(), style: STYLE }],
@@ -135,7 +159,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'last-pearl',
       description:
-        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "right" or "left" moves Claude (right stays clear of the session list; left is larger, for a closed list), "frost 0.5" sets how strongly panels veil the scene (0 to 1), "ambience on" or "ambience off" plays or stops the soft drone and bells under the sound cues (off at first), "preview 60" shows the scene at that percent of context until the next turn ends',
+        'The Last Pearl theme. "/last-pearl" sets it, "off" clears it, "right" or "left" moves Claude (right stays clear of the session list; left is larger, for a closed list), "frost 0.5" sets how strongly panels veil the scene (0 to 1), "ambience on" or "ambience off" plays or stops the soft drone and bells under the sound cues (off at first), "parallax 1" sets how far the layers of the scene sway from side to side (0, still, to 3), "preview 60" shows the scene at that percent of context until the next turn ends',
     })
     const savedPlace = await $.store.get('place')
     if (isPlace(savedPlace)) {
@@ -148,6 +172,10 @@ export const register: Register = on => {
     const savedAmbience = await $.store.get('ambience')
     if (typeof savedAmbience === 'boolean') {
       ambience = savedAmbience
+    }
+    const savedParallax = await $.store.get('parallax')
+    if (typeof savedParallax === 'number' && savedParallax >= 0 && savedParallax <= MAX_PARALLAX) {
+      parallax = savedParallax
     }
     // a line left by an earlier load, from before the app had attached, would otherwise stay
     $.ui.status(undefined)
@@ -207,6 +235,21 @@ export const register: Register = on => {
           : 'The ambience is off. The sound cues still play while the speaker in the title bar is on.',
       }
     }
+    if (word === 'parallax') {
+      const amount = value === 'on' ? DEFAULT_PARALLAX : value === 'off' ? 0 : Number(value)
+      if (value === '' || !Number.isFinite(amount) || amount < 0 || amount > MAX_PARALLAX) {
+        return { text: `Parallax is ${parallax}. Give a number from 0 (still) to ${MAX_PARALLAX}, such as /last-pearl parallax 1.5; 1 is the sway as drawn.` }
+      }
+      parallax = Math.round(amount * 100) / 100
+      await $.store.set('parallax', parallax)
+      $.ui.invalidate('ui.render')
+      return {
+        text:
+          parallax === 0
+            ? 'Parallax is off: the scene holds still but for its own small motions.'
+            : `Parallax is now ${parallax}: the sky, the tree, the clouds and Claude sway slowly from side to side, the nearer ones further.`,
+      }
+    }
     if (word === 'preview') {
       const percent = Number(value)
       if (value === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) {
@@ -219,23 +262,24 @@ export const register: Register = on => {
       return { text: `Showing the scene at ${percent}% of context until the next turn ends. The session's own is ${fill === undefined ? 'not measured yet' : `${fill}%`}.` }
     }
     if (word !== '') {
-      return { text: 'Use /last-pearl, or /last-pearl off, right, left, frost followed by a number from 0 to 1, ambience on or off, or preview followed by a percentage.' }
+      return { text: 'Use /last-pearl, or /last-pearl off, right, left, frost followed by a number from 0 to 1, ambience on or off, parallax followed by a number from 0 to 3, or preview followed by a percentage.' }
     }
     const set = await applyLook($)
     return { text: set?.isDrawn ? 'The Last Pearl is set.' : `The Last Pearl is set, but nothing draws it here${set && !set.isDrawn ? `: ${set.reason}` : '.'}` }
   })
 
-  on('ui.render', { component: 'Backdrop' }, ($, e, next) => {
+  on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
     if ((e.surface !== 'desktop' && e.surface !== 'mobile') || e.props.scene !== SCENE_NAME) {
       return next(e)
     }
+    const gauge = gaugeCss(shown ?? fill, FRUIT_COUNT)
+    const key = `${place} ${parallax} ${gauge}`
+    let timed = drawn.get(e.surface)
+    if (timed?.key !== key) {
+      timed = { key, at: await $.clock.now() }
+      drawn.set(e.surface, timed)
+    }
     const { Svg } = $.ui.resolve(e)
-    return (
-      <Svg
-        source={scene(place, gaugeCss(shown ?? fill, FRUIT_COUNT))}
-        alt={ALT[place]}
-        isInteractive
-      />
-    )
+    return <Svg source={scene(place, gauge + swayCss(parallax, timed.at))} alt={ALT[place]} isInteractive />
   })
 }

@@ -14,6 +14,8 @@ The beam of light that rises from it is the critical line, $\mathrm{Re}(s) = \tf
 Dark mode is the night; light mode is warm parchment with a sunburst. Messages are set in serif type, Claude's
 replies sit on a card with gold corner brackets, and soft bell cues play once you press the speaker in the session's
 title bar. A background ambience (a low drone and the odd star-bell) is off until you run `/last-pearl ambience on`.
+The scene has a slight parallax: the sky, the tree, the clouds and Claude sway slowly from side to side, the nearer
+ones further, as a stage set does when the camera slides past it.
 
 ## Install
 
@@ -55,6 +57,9 @@ mobile apps (a terminal has no backdrop to draw on).
   - `/last-pearl ambience on` adds a soft background ambience (a low drone and the odd star-bell) under the sound
     cues, and is remembered; `/last-pearl ambience off`, the default, stops it. Either way, sound plays only while
     the speaker in the session's title bar is on.
+  - `/last-pearl parallax 1` sets how far the scene's layers sway, from 0 (still) to 3, and is remembered; 1 is the
+    sway as drawn (Claude about 10 points either way, the sky about 2, over 24 seconds). The app holds the scene
+    still by itself if you have asked your system for reduced motion.
   - `/last-pearl preview 40` shows the scene at that percentage of context until the next turn ends.
 
 ## Credits and acknowledgements

@@ -42,8 +42,16 @@ function claude() {
   const [px, py, pr] = art.pearl
   return { art, s, x, y, PX: n(x + px * s), PY: n(y + py * s), R: n(Math.max(13, pr * s)) }
 }
-// fig-in lets a narrow (phone) window enlarge her about the bottom right corner in the right placement
-const box = inner => `<g class="fig-in"><svg @@BOX@@ overflow="visible">${inner}</svg></g>`
+// The parallax: the scene's planes ride one slow swing from side to side (class "par" in the
+// scene's style, build-scene.mjs), as a stage set does when the camera slides past it: the nearer
+// a plane, the further it moves. SWAY is how far each goes either way, in its own units (the
+// window's points for her, and close to that for the rest).
+export const SWAY = { sky: 2, tree: 4.5, clouds: 7, figure: 10 }
+export const sway = (far, inner, cls = '') => `<g class="par${cls}" style="--d:${far}">${inner}</g>`
+
+// fig-in lets a narrow (phone) window enlarge her about the bottom right corner in the right placement.
+// Her light and she herself are each drawn in this box, so they sway as one and the beam stays on the pearl.
+const box = inner => sway(SWAY.figure, `<g class="fig-in"><svg @@BOX@@ overflow="visible">${inner}</svg></g>`)
 
 // In the right placement her box is this share of the window's width, pinned to the right edge.
 const RIGHT_SHARE = 17.5
@@ -68,7 +76,7 @@ export function places() {
       // here the pearl is up among the tree's fruit, so the label goes just under the glare, in the
       // pocket between her raised arm and her head
       EQ: label(PX, PY, { clear: 44, up: -16, wide: 168 }),
-      CSS: '.tree-art{transform-origin:100% 0}',
+      CSS: '.tree-art{transform-origin:100% 0}.pt{--o:1}',
     },
     right: {
       // a box as wide as she is (hair tips may bleed), so the window's width sets her size;
@@ -80,7 +88,7 @@ export function places() {
       TREEFLIP: ` transform="translate(${tree.width} 0) scale(-1 1)"`,
       // the light is 1.6 times larger here, so the band reaches further, and the strip is narrow
       EQ: label(PX, PY, { clear: 80, up: 124, wide: 190 }),
-      CSS: '.tree-art{transform-origin:0 0}.fig-in{transform-box:view-box;transform-origin:100% 100%}@media (max-width:700px){.fig-in{transform:scale(3.2)}}',
+      CSS: '.tree-art{transform-origin:0 0}.pt{--o:-1}.fig-in{transform-box:view-box;transform-origin:100% 100%}@media (max-width:700px){.fig-in{transform:scale(3.2)}}',
     },
   }
 }
@@ -159,6 +167,8 @@ export function claudeFigure() {
 // edge and the trunk down one side; a taller or wider window crops the far ends. The placement
 // picks the corner and mirrors the tree to match.
 // (On a very wide window the scene's style shrinks it toward that corner, or it would fill the sky.)
+// The art is cut off at that corner's two edges, so its sway ("pt") is offset by the placement to
+// run from rest toward the corner and back, never away from it: the cut edges stay out of the window.
 function treeFruit(art) {
   if (!art.fruitFill) throw new Error('trace the tree with --blobs and --round-fruit: the scene draws and ripens its fruit')
   const far = ([fx, fy]) => Math.hypot(art.width - fx, art.height - fy)
@@ -184,5 +194,5 @@ export function treeLayer() {
   const glows = order
     .map(([fx, fy, fr], i) => `<circle class="glowf gl g${i}" fill="url(#fruitglow)" style="animation-delay:-${n((i * 1.7) % 8)}s" cx="${fx}" cy="${fy}" r="${n(fr * 2.6)}"/>`)
     .join('')
-  return `<svg width="100%" height="100%" viewBox="0 0 ${art.width} ${art.height}" preserveAspectRatio="@@TREEPAR@@"><defs><radialGradient id="fruitglow"><stop offset="0" stop-color="#ffb24d" stop-opacity="1"/><stop offset=".45" stop-color="#f39a3a" stop-opacity=".55"/><stop offset="1" stop-color="#f39a3a" stop-opacity="0"/></radialGradient></defs><g class="tree-art"><g@@TREEFLIP@@><g${shear}>${glows}${paths(art)}${fruit}</g></g></g></svg>`
+  return `<svg width="100%" height="100%" viewBox="0 0 ${art.width} ${art.height}" preserveAspectRatio="@@TREEPAR@@"><defs><radialGradient id="fruitglow"><stop offset="0" stop-color="#ffb24d" stop-opacity="1"/><stop offset=".45" stop-color="#f39a3a" stop-opacity=".55"/><stop offset="1" stop-color="#f39a3a" stop-opacity="0"/></radialGradient></defs>${sway(SWAY.tree, `<g class="tree-art"><g@@TREEFLIP@@><g${shear}>${glows}${paths(art)}${fruit}</g></g></g>`, ' pt')}</svg>`
 }

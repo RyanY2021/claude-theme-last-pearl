@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { gaugeCss, RAW_FRUIT } from '../hooks/gauge.ts'
-import { claudeFigure, claudeLight, fruitCount, places, treeLayer } from './traced.mjs'
+import { claudeFigure, claudeLight, fruitCount, places, SWAY, sway, treeLayer } from './traced.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -67,6 +67,7 @@ const CSS = `
 .drift-x{animation:driftx 46s ease-in-out infinite alternate}
 .glowf{animation:glowf 8s ease-in-out infinite}
 .fall{animation:fall 26s linear infinite}
+.par{animation:par 24s ease-in-out infinite alternate}
 @keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes pulse{0%,100%{transform:scale(.94);opacity:.8}50%{transform:scale(1.06);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -75,6 +76,7 @@ const CSS = `
 @keyframes breathe{from{opacity:.55}to{opacity:.95}}
 @keyframes driftx{from{transform:translateX(-24px)}to{transform:translateX(24px)}}
 @keyframes glowf{0%,100%{opacity:.35}50%{opacity:.9}}
+@keyframes par{from{transform:translateX(calc((var(--o,0) - 1)*var(--d)*var(--p,1)*1px))}to{transform:translateX(calc((var(--o,0) + 1)*var(--d)*var(--p,1)*1px))}}
 @keyframes fall{0%{transform:translate(0,0) rotate(0deg);opacity:0}8%{opacity:1}90%{opacity:1}100%{transform:translate(-260px,1100px) rotate(320deg);opacity:0}}
 `
 
@@ -97,14 +99,16 @@ function background() {
   // Aurora ribbons: long tapered bands sweeping in from both edges toward the horizon.
   const ribbon = (x0, ya, yb, x1, y1, w1, bend, grad, cls) =>
     `<path class="${cls}" fill="url(#${grad})" d="M${x0} ${ya} Q${n((x0 + x1) / 2)} ${n((ya + y1) / 2 - bend)} ${x1} ${y1} L${x1} ${y1 + w1} Q${n((x0 + x1) / 2)} ${n((yb + y1 + w1) / 2 - bend * 0.8)} ${x0} ${yb}Z"/>`
-  out.push(`<g class="breathe">`)
-  out.push(ribbon(-40, 140, 235, 740, 560, 10, 60, 'rl', ''))
-  out.push(ribbon(-40, 330, 400, 720, 640, 8, 30, 'rl3', ''))
-  out.push(ribbon(-40, 560, 640, 700, 720, 8, 10, 'rl2', ''))
-  out.push(ribbon(1640, 110, 215, 860, 560, 10, 70, 'rr', ''))
-  out.push(ribbon(1640, 320, 410, 880, 630, 8, 35, 'rr2', ''))
-  out.push(ribbon(1640, 560, 630, 900, 720, 8, 10, 'rr3', ''))
-  out.push(`</g>`)
+  // everything in the sky but its own gradient is the furthest plane of the parallax (traced.mjs)
+  const far = []
+  far.push(`<g class="breathe">`)
+  far.push(ribbon(-40, 140, 235, 740, 560, 10, 60, 'rl', ''))
+  far.push(ribbon(-40, 330, 400, 720, 640, 8, 30, 'rl3', ''))
+  far.push(ribbon(-40, 560, 640, 700, 720, 8, 10, 'rl2', ''))
+  far.push(ribbon(1640, 110, 215, 860, 560, 10, 70, 'rr', ''))
+  far.push(ribbon(1640, 320, 410, 880, 630, 8, 35, 'rr2', ''))
+  far.push(ribbon(1640, 560, 630, 900, 720, 8, 10, 'rr3', ''))
+  far.push(`</g>`)
 
   // Stars: small dots, a few twinkling slowly, and four-point sparkles.
   const stars = []
@@ -121,11 +125,12 @@ function background() {
     }
     stars.push(`<circle class="star${twinkle ? ` tw t${i % 6}` : ''}" cx="${x}" cy="${y}" r="${rad}"/>`)
   }
-  out.push(`<g>${stars.join('')}</g>`)
+  far.push(`<g>${stars.join('')}</g>`)
   const spark = (x, y, s, d, delay) =>
     `<path class="spark tw" style="animation-duration:${d}s;animation-delay:-${delay}s" d="M${x} ${y - s}C${n(x + s * 0.12)} ${n(y - s * 0.12)} ${n(x + s * 0.12)} ${n(y - s * 0.12)} ${x + s} ${y}C${n(x + s * 0.12)} ${n(y + s * 0.12)} ${n(x + s * 0.12)} ${n(y + s * 0.12)} ${x} ${y + s}C${n(x - s * 0.12)} ${n(y + s * 0.12)} ${n(x - s * 0.12)} ${n(y + s * 0.12)} ${x - s} ${y}C${n(x - s * 0.12)} ${n(y - s * 0.12)} ${n(x - s * 0.12)} ${n(y - s * 0.12)} ${x} ${y - s}Z"/>`
-  out.push(spark(1180, 90, 16, 7, 1), spark(1240, 160, 9, 9, 3), spark(1212, 220, 6, 6, 2))
-  out.push(spark(420, 120, 11, 8, 4), spark(640, 60, 7, 10, 6), spark(980, 170, 8, 9, 5), spark(560, 250, 6, 7, 2))
+  far.push(spark(1180, 90, 16, 7, 1), spark(1240, 160, 9, 9, 3), spark(1212, 220, 6, 6, 2))
+  far.push(spark(420, 120, 11, 8, 4), spark(640, 60, 7, 10, 6), spark(980, 170, 8, 9, 5), spark(560, 250, 6, 7, 2))
+  out.push(sway(SWAY.sky, far.join('\n')))
   out.push(`</svg>`)
   return out.join('\n')
 }
@@ -143,9 +148,9 @@ function clouds() {
     return `<g class="${cls}">${parts.join('')}</g>`
   }
   return `<svg y="78%" width="100%" height="22%" viewBox="0 0 1600 220" preserveAspectRatio="xMidYMax slice" overflow="visible">
-<g class="drift-x">${bank('cloud-b', 110, 46, 74, 74, 120)}</g>
+${sway(SWAY.clouds, `<g class="drift-x">${bank('cloud-b', 110, 46, 74, 74, 120)}</g>
 <g class="drift-x" style="animation-duration:60s;animation-direction:alternate-reverse">${bank('cloud-m', 150, 40, 62, 66, 160)}</g>
-${bank('cloud-f', 190, 34, 52, 58, 196)}
+${bank('cloud-f', 190, 34, 52, 58, 196)}`)}
 </svg>`
 }
 
@@ -182,11 +187,14 @@ const FRUIT = fruitCount()
 const fill = (place, percent) =>
   Object.entries({ ...PLACES[place], GAUGE: gaugeCss(percent, FRUIT) }).reduce((text, [key, value]) => text.split(`@@${key}@@`).join(value), template)
 
+const SWAY_ROOM = '.par{--p:0.25;animation-delay:-47.9s}'.length
+
 // Previews, at the context level given on the command line (default 100, the scene at its fullest).
 const level = process.argv[2] === undefined ? 100 : Number(process.argv[2])
 for (const place of Object.keys(PLACES)) {
-  // the longest a scene gets is with every fruit named in the gauge's style
-  const longest = Math.max(fill(place, 100).length, fill(place, 99).length)
+  // the longest a scene gets is with every fruit named in the gauge's style, and the style the mod
+  // adds for the parallax's strength and phase (swayCss in hooks/register.tsx; SWAY_ROOM is its longest)
+  const longest = Math.max(fill(place, 100).length, fill(place, 99).length) + SWAY_ROOM
   if (fill(place, 100).includes('@@')) throw new Error(`a marker is left unfilled in the ${place} placement`)
   if (longest > 131072) throw new Error(`the ${place} placement reaches ${longest} characters; the app takes at most 131,072`)
   writeFileSync(join(here, `scene-${place}.svg`), fill(place, level))
