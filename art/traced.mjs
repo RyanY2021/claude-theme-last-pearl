@@ -96,8 +96,9 @@ const FIGURES = {
   // line drawn on a screenshot; 865 shows her whole, her boots just above the foot, perched over the
   // clouds)
   dark: { name: 'claude-seated', size: 1909, foot: 345, pearl: 540, aspect: 1.8, phone: 2.3, edge: 0, front: 160,
-    // right of the beam, in the open sky above her lifted face and below the bough's fruit
-    label: { clear: 26, up: 292, wide: 72 }, star: 1.9, glow: 4.2 },
+    // right of the beam, as large as light mode's, in the open sky just above her head and below the
+    // bough's fruit
+    label: { clear: 26, up: 334, wide: 108 }, star: 1.9, glow: 4.2 },
 }
 
 // The window's view of her box: its height is VH of the box's units, its foot `foot` below the
