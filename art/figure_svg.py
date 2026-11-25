@@ -2,7 +2,7 @@
 
 The figure in use is GPT's vector redraw of the figure picture (claude-gpt-3.png), made in that
 picture's own pixels, 1012 by 1536 (candidates/external/claude-gpt-svg.svg; -hand.svg is the same with
-the raised hand redrawn so that the index finger points up beside the thumb). It is already sharp
+the raised hand redrawn so that the index finger points up, the thumb folded against its side). It is already sharp
 vector, so it is not traced; this script only fits it to the scene:
 
   - ids get a prefix, so they cannot meet the scene's own; xlink:href becomes href; title and desc go
