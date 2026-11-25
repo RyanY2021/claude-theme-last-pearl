@@ -12,7 +12,11 @@ vector, so it is not traced; this script only fits it to the scene:
   - the raised arm's own edge where it meets other parts of her (--arm-edge): the edge of what shows
     of the arm (the group --arm, less what is painted over it), from about one point to about another,
     drawn over everything, so the sleeve reads as one shape over her hair and the cape's lining
-  - the pearl: just above the topmost point (the raised fingertip), as trace.py --tip puts it
+  - the pearl: just above the topmost point (the raised fingertip), as trace.py --tip puts it, or
+    where --pearl says (a figure that holds it elsewhere)
+
+For a figure only dark mode shows (claude-seated-2.svg, GPT's SVG of claude-seated-2.png), --no-outline
+leaves out the ink edge, which is light mode's, and --keep may be left out, to keep every shape.
 
 It renders the figure with Google Chrome (or CHROME) to trace the outlines; curves.py holds the curve helpers.
 
@@ -20,6 +24,9 @@ usage (from art/):
   uv run --with potracer --with pillow --with numpy python figure_svg.py \
       candidates/external/claude-gpt-svg-hand.svg vector/claude.json --keep 0,0,830,912 \
       --arm raised-arm --arm-edge "440.6,258.1>472.5,389.4;377.5,330>421.2,453.1"
+  uv run --with potracer --with pillow --with numpy python figure_svg.py \
+      candidates/external/claude-seated-2.svg vector/claude-seated.json --prefix d- --no-outline \
+      --pearl 163.4,665,48.5
 """
 import argparse, json, math, os, re, subprocess, tempfile
 import xml.etree.ElementTree as ET
@@ -33,7 +40,9 @@ from curves import between, from_potrace, path
 ap = argparse.ArgumentParser()
 ap.add_argument("src")
 ap.add_argument("dst")
-ap.add_argument("--keep", required=True, help="X0,Y0,X1,Y1 in source pixels: what the window can show")
+ap.add_argument("--keep", default=None, help="X0,Y0,X1,Y1 in source pixels: what the window can show (absent: all of it)")
+ap.add_argument("--pearl", default=None, help="X,Y,R in source pixels: where the pearl is held (absent: above the topmost point)")
+ap.add_argument("--no-outline", action="store_true", help="no light-mode ink edge (a figure only dark mode shows)")
 ap.add_argument("--arm", default=None, help="id of the group whose edge is drawn inside the figure (her raised arm)")
 ap.add_argument("--arm-edge", default=None, help="X0,Y0>X1,Y1;... in source pixels: the stretches of the arm's edge to draw")
 ap.add_argument("--prefix", default="c-")
@@ -43,7 +52,7 @@ args = ap.parse_args()
 SVG = "http://www.w3.org/2000/svg"
 XL = "http://www.w3.org/1999/xlink"
 CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
-KX0, KY0, KX1, KY1 = [float(v) for v in args.keep.split(",")]
+KX0, KY0, KX1, KY1 = [float(v) for v in args.keep.split(",")] if args.keep else (-1e9, -1e9, 1e9, 1e9)
 
 tree = ET.parse(args.src)
 root = tree.getroot()
@@ -124,7 +133,8 @@ def prune(parent):
                 parent.remove(el)
 
 full = ET.tostring(root, encoding="unicode")  # the whole figure, for the frame and the pearl
-prune(root)
+if args.keep:
+    prune(root)
 
 # ---- render the whole figure, and the arm alone, as black on white
 work = tempfile.mkdtemp()
@@ -153,6 +163,8 @@ ys, xs = np.where(whole)
 top = ys.min()
 near_top = ys < top + 3 * k
 pearl = [round(float(xs[near_top].mean()) / k, 2), round(float(top) / k - 14, 2), 14]
+if args.pearl:
+    pearl = [float(v) for v in args.pearl.split(",")]
 # the frame's height: the whole figure, fingertip to boots, plus the 3-pixel pad trace.py leaves
 # at its scale of 1.6 at each end, so the scene draws her the same size as the traced figure
 height = round(float(ys.max() - top + 1) / k + 2 * 3 / 1.6, 2)
@@ -161,10 +173,13 @@ height = round(float(ys.max() - top + 1) / k + 2 * 3 / 1.6, 2)
 def traced(mask, turd=8):
     return from_potrace(potrace.Bitmap(~mask).trace(turdsize=turd, alphamax=1.0, opticurve=True, opttolerance=0.2), k)
 
-kx0, ky0, kx1, ky1 = [round(v * k) for v in (KX0, KY0, KX1, KY1)]
 cut = np.zeros_like(whole)
-cut[max(0, ky0):ky1, max(0, kx0):kx1] = True
-sil = path(traced(whole & cut), closed=True)
+if args.keep:
+    kx0, ky0, kx1, ky1 = [round(v * k) for v in (KX0, KY0, KX1, KY1)]
+    cut[max(0, ky0):ky1, max(0, kx0):kx1] = True
+else:
+    cut[:] = True
+sil = None if args.no_outline else path(traced(whole & cut), closed=True)
 
 def only(keep):
     doc = ET.fromstring(full)
@@ -219,12 +234,13 @@ clean = lambda s: re.sub(r"\s*\n\s*", "", s).replace(" />", "/>")
 meta = {
     "width": W, "height": height, "scale": 1, "pearl": pearl,
     "defs": clean(defs), "parts": [clean("".join(before)), clean("".join(after))],
-    "sil": sil,
 }
+if sil:
+    meta["sil"] = sil
 if arm:
     meta["arm"] = arm
 with open(args.dst, "w") as fh:
     json.dump(meta, fh)
-size = len(meta["defs"]) + sum(len(p) for p in meta["parts"]) + len(sil) + len(arm or "")
+size = len(meta["defs"]) + sum(len(p) for p in meta["parts"]) + len(sil or "") + len(arm or "")
 print(f"{args.dst}: {len(kept)} groups kept of {len(order)}, pearl at {pearl}, height {height}; {size} characters "
-      f"(drawing {len(meta['defs']) + sum(len(p) for p in meta['parts'])}, outline {len(sil)}, arm {len(arm or '')})")
+      f"(drawing {len(meta['defs']) + sum(len(p) for p in meta['parts'])}, outline {len(sil or '')}, arm {len(arm or '')})")

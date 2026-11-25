@@ -75,6 +75,50 @@ Redraw only the hand, so that it really carries the book from underneath: the ha
 Flat cut-paper style, like her raised hand: one simple rounded cream shape for the hand plus a short thumb. No separate finger lines, no outlines, no shading.
 ```
 
+## 1b. Claude seated (dark mode's figure)
+
+Attached, in this order: the standing figure's picture (who she is and how she is drawn), and the film's title
+frame, cropped to her and flipped so she faces left (the pose). Size: portrait 2:3 (1024 x 1536).
+
+```text
+Draw the character from image 1 in the seated pose of image 2. Image 1 shows who she is and exactly how she is drawn: keep her outfit, her colours, her proportions and the flat cut-paper style just as they are there. Image 2 is a rough reference for the pose only (a frame of an animation, already flipped so that she faces left): do not copy its colours, its background, its tree or its clouds.
+
+POSE: she sits sideways on a high branch that is not drawn, seen from the side, facing LEFT. Her knees point to the left of the picture and her lower legs hang straight down, the two boots side by side. Her back is upright. Her head is turned to the left and lifted a little: her face, in profile, looks up and to the left at the sky. Her very long hair falls down her back and streams out behind her to the right, far past where she sits. One arm holds the dark red book upright against her chest. The other hand rests in front of her, just above her knees, open and cupped, palm up, holding the pearl.
+
+THE PEARL: one plain flat pure white circle, #FFFFFF, a little wider than her cupped hand, resting in her palm. No glow, no rays, no sparkle, no light falling on her: the light is added later.
+
+FACE: blank, as in image 1: a smooth cream profile with no eye, no eyebrow, no nose and no mouth. Her M-shaped bangs, seen from the side, fall over her forehead.
+
+HAIR ORNAMENT: as in image 1, the small orange daisy with a gold centre, the black ribbon bow under it, and the two short cream ribbon tails with a small gold tassel, on the side of her head that faces us.
+
+STYLE: lineless flat colour, like cut paper. Every shape is one solid colour with a crisp edge. No outlines, no line art, no gradients, no texture, no soft shading, no glow. Use only the colours of image 1:
+- hair: orange #F0762A, with a few large darker-orange #C9541C shadow shapes
+- skin and all white cloth: cream #F8F1E4, with a few large lilac-grey #D6CCD6 fold shadows
+- black cloth, ribbons and bows: near-black #1F1B2A
+- the inside of the capelet: brown #84442C
+- the book: dark red #862A22
+- trim, buttons, tassels, chain, flower centres: gold #F2BD55
+Nothing thinner than about 6 pixels: every shape, every line of trim and every gap between two shapes is at least 6 pixels wide; anything finer is made bolder or left out.
+
+FRAMING: the whole figure, from the top of her head to her boots and the ends of her hair, with a small empty margin on every side. Nothing under her or around her: no branch, no cloud, no ground, no shadow, no background, no text, no border.
+
+Transparent background.
+```
+
+The first render came out short below the waist, and one edit lengthened her thighs, lower legs, skirt and hip
+panels.
+
+## How the figures became vector
+
+Both figures in the scene are not traces: GPT redrew each picture as an SVG in the picture's own pixels, in
+ChatGPT's work mode, in a new session with only the picture attached. For the seated one the prompt was:
+
+```text
+Could you convert the image into a clean vector illustration. Preserve key features and details as much as possible, create clean paths, limit the characters in 65,000?
+```
+
+`figure_svg.py` then fits each SVG to the scene.
+
 ## 2. The tree (a frame along the top and the right)
 
 Attached:

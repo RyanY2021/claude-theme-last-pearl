@@ -11,12 +11,15 @@ const SCENE_NAME = 'last-pearl'
 const GOLD = '#d9a441'
 
 // Messages: serif type, as on a manuscript; Claude's replies sit on a card with gold corner brackets.
+// The rules name the design system's colors (surface-2, text-primary, bg-accent), which the app
+// follows into dark mode; named in a rule, the four message colors (bg-assistant-message and the
+// rest, in palette.ts) were drawn with light mode's values in dark mode (seen 2026-11-25).
 const STYLE: ThemeStyle = {
   Text: { fontFamily: ['serif'], fontSize: 16, lineHeight: 26 },
   Heading: { fontFamily: ['serif'], fontWeight: 'semibold', letterSpacing: 0.5, color: 'text-accent' },
   UserMessage: {
-    color: 'text-user-message',
-    backgroundColor: 'bg-user-message',
+    color: 'text-primary',
+    backgroundColor: 'bg-accent',
     borderColor: 'border-accent',
     borderWidth: 1,
     radius: [18, 18, 4, 18],
@@ -25,8 +28,8 @@ const STYLE: ThemeStyle = {
     shadow: { x: 0, y: 4, blur: 14, color: '#0000004d' },
   },
   AssistantMessage: {
-    color: 'text-assistant-message',
-    backgroundColor: 'bg-assistant-message',
+    color: 'text-primary',
+    backgroundColor: 'surface-2',
     paddingX: 20,
     paddingY: 16,
     shadow: { x: 0, y: 6, blur: 18, color: '#00000040' },
@@ -35,7 +38,7 @@ const STYLE: ThemeStyle = {
         viewBox: 96,
         slice: 20,
         paths: [
-          { d: 'M0 0H96V96H0Z', color: 'bg-assistant-message' },
+          { d: 'M0 0H96V96H0Z', color: 'surface-2' },
           { d: 'M5 18V5H18', strokeWidth: 1.2, color: GOLD },
           { d: 'M78 5H91V18', strokeWidth: 1.2, color: GOLD },
           { d: 'M91 78V91H78', strokeWidth: 1.2, color: GOLD },
@@ -121,7 +124,7 @@ let fill: number | undefined
 let shown: number | undefined
 
 const ALT =
-  'A starry night framed by a golden tree whose bough reaches across the top, glowing orange fruit hanging under it. At the bottom right, large and seen from the waist up, is Claude, a girl with long flowing orange hair and a blank face, raising a glowing pearl whose beam of light rises to the top of the sky. The fruit ripen and the beam brightens as the context of the session fills.'
+  'A starry night framed by a golden tree whose bough reaches across the top, glowing orange fruit hanging under it. At the bottom right is Claude, a girl with long flowing orange hair and a blank face, with a glowing pearl whose beam of light rises to the top of the sky: in light mode she stands, seen from the waist up, raising the pearl; in dark mode she sits facing left, the pearl cupped in her hand. The fruit ripen and the beam brightens as the context of the session fills.'
 
 function base(): ThemeSetArgs {
   return {

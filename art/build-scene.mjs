@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { gaugeCss, RAW_FRUIT } from '../hooks/gauge.ts'
-import { claudeFigure, claudeLight, fruitCount, LAYOUT_CSS, SWAY, sway, treeLayer } from './traced.mjs'
+import { claudeFigure, claudeLight, fruitCount, LAYOUT_CSS, sharedDefs, SWAY, sway, treeLayer } from './traced.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -180,11 +180,14 @@ function drifting() {
 // (hooks/gauge.ts).
 const template = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
 <style>${CSS.replace(/\n/g, '')}${LAYOUT_CSS}@@GAUGE@@</style>
+${sharedDefs()}
 ${background()}
-${claudeLight()}
+${claudeLight('light')}
+${claudeLight('dark')}
 ${treeLayer()}
 ${clouds()}
-${claudeFigure()}
+${claudeFigure('light')}
+${claudeFigure('dark')}
 ${drifting()}
 </svg>`
 

@@ -36,18 +36,18 @@ function paths(art, edge = 0) {
 // curves), drawn over everything a little wider than `edge`, so the arm reads as one shape.
 function drawn(art, edge) {
   const arm = art.arm ? `<path class="sil" fill="none" stroke-width="${n(1.2 * edge)}" stroke-linecap="round" d="${art.arm}"/>` : ''
-  return `${art.defs}<path class="sil" fill="none" stroke-width="${n(2 * edge)}" d="${art.sil}"/>${art.parts.join('')}${arm}`
+  const sil = art.sil ? `<path class="sil" fill="none" stroke-width="${n(2 * edge)}" d="${art.sil}"/>` : ''
+  return `${art.defs}${sil}${art.parts.join('')}${arm}`
 }
 
-// Claude is drawn in a box 1150 units tall (V), her height from fingertip to boots FIG_H in it and
-// her left edge FIG_X; the window shows the part of that box VIEW_* below choose. Her drawing
-// (claude.json) keeps only what the window can show, her hand to the skirt's bows (figure_svg.py
-// --keep), in the whole figure's frame. u is the box's units to one pixel of the original picture.
+// Claude is drawn in a box 1150 units tall (V), her height FIG_H in it and her left edge FIG_X; the
+// window shows the part of that box her view (below) chooses. u is the box's units to one pixel of
+// her original picture.
 const V = 1150
 const FIG_H = 820
 const FIG_X = -34
-function claude() {
-  const art = load('claude')
+function claude(name) {
+  const art = load(name)
   const s = FIG_H / art.height
   const x = FIG_X
   const y = V - 10 - FIG_H
@@ -61,63 +61,87 @@ function claude() {
 export const SWAY = { sky: 2, tree: 4.5, clouds: 7, figure: 10 }
 export const sway = (far, inner, cls = '') => `<g class="par${cls}" style="--d:${far}">${inner}</g>`
 
-// She is a half-length portrait, as large as a companion beside the conversation: cut off by the
-// window's foot (at her skirt's bows) and by its right edge (her far sleeve and the book), with
-// her raised arm, the pearl and her head whole, and the beam rising from the pearl through the
-// upper third of the window. All but VIEW_ASPECT are in pixels of the original picture
-// (art/candidates/external/claude-gpt-3.png, 1024 by 1536):
-//   VIEW_SIZE    the height of a 1440 by 900 (16:10) window, so she is drawn at 900/VIEW_SIZE
-//                points to its pixel there (larger makes her smaller, about the bottom right
-//                corner, leaving more of the beam above her)
-//   VIEW_FOOT    how far below the pearl the window's foot cuts her (her drawing must reach a
-//                little further: its --keep box)
-//   VIEW_PEARL   how far left of the window's right edge the pearl is held (the drawing must
-//                reach past that edge by more than her sway)
-//   VIEW_ASPECT  the narrowest window (width over height) that shows her at that full size; a
-//                narrower one, the usual Mac window among them, shrinks her by its width about the
-//                bottom right corner, so the pearl stays clear of the conversation column
-//   INK_EDGE     how far her light-mode ink edge shows outside her (about 1.6 points at full size)
-//   PHONE_ZOOM   how much a phone, whose width would make her small, enlarges her about the
-//                bottom right corner
-const VIEW_SIZE = 1406
-const VIEW_FOOT = 894
-const VIEW_PEARL = 269
-const VIEW_ASPECT = 1.6
-const INK_EDGE = 2.5
-const PHONE_ZOOM = 2.25
+// Light mode and dark mode show her differently. A backdrop is not told which mode is showing, so
+// the scene carries both figures, each with its own light, and its style shows one (LAYOUT_CSS).
+//   light  standing, a half-length portrait as large as a companion beside the conversation,
+//          raising the pearl: cut off by the window's foot (at her skirt's bows) and by its right
+//          edge (her far sleeve and the book), the beam rising through the upper third of the
+//          window (claude.json: GPT's SVG of claude-gpt-3.png, with the raised hand redrawn)
+//   dark   seated, whole, facing left toward the conversation, the pearl cupped in her hand in
+//          front of her knees and its beam rising from there (claude-seated.json: GPT's SVG of
+//          claude-seated-2.png)
+// Each one's view, all but `aspect` and `phone` in pixels of her original picture:
+//   size    the height of a 1440 by 900 (16:10) window, so she is drawn at 900/size points to
+//           its pixel there (larger makes her smaller, about the bottom right corner)
+//   foot    how far below the pearl the window's foot is (her drawing must reach a little further:
+//           its --keep box, if it has one)
+//   pearl   how far left of the window's right edge the pearl is held (the drawing must reach past
+//           that edge by more than her sway)
+//   aspect  the narrowest window (width over height) that shows her at that full size; a narrower
+//           one, the usual Mac window among them, shrinks her by its width about the bottom right
+//           corner, so the pearl stays clear of the conversation column
+//   phone   how much a phone, whose width would make her small, enlarges her about that corner
+//   edge    how far her light-mode ink edge shows outside her (light mode's figure only)
+//   label   where the beam's label sits, in the window's points: its left edge `clear` right of the
+//           pearl, its top `up` above it (negative: below), `wide` its width
+//   star, glow  the pearl's breathing star and its glow, as multiples of the pearl's radius
+//   front   for a pearl held down among the clouds at the scene's foot: so many points of the beam,
+//           from the pearl up, drawn again in front of the clouds (and behind her), fading out at the
+//           top into the beam behind the tree and the clouds
+const FIGURES = {
+  light: { name: 'claude', size: 1406, foot: 894, pearl: 269, aspect: 1.6, phone: 2.25, edge: 2.5,
+    // just under the glare, in the pocket between her raised arm and her head
+    label: { clear: 36, up: -12, wide: 108 }, star: 2.6, glow: 6 },
+  // cut off by the window's foot across her skirt, below the bow at her hip (chosen 2026-11-25 from a
+  // line drawn on a screenshot; 865 shows her whole, her boots just above the foot, perched over the
+  // clouds)
+  dark: { name: 'claude-seated', size: 1909, foot: 345, pearl: 540, aspect: 1.8, phone: 2.3, edge: 0, front: 160,
+    // right of the beam, in the open sky above her lifted face and below the bough's fruit
+    label: { clear: 26, up: 292, wide: 72 }, star: 1.9, glow: 4.2 },
+}
 
-// The window's view of her box: its height is VH of the box's units, its foot VIEW_FOOT below the
-// pearl and its right edge VIEW_PEARL right of it, pinned to the window's bottom right corner (the
-// window's height sets her size, and a window narrower than VIEW_ASPECT its width). The rays were
-// drawn to reach across a window V units high, so they are scaled by VH / V about the pearl.
-function view() {
-  const c = claude()
+// The window's view of her box: its height is VH of the box's units, its foot `foot` below the
+// pearl and its right edge `pearl` right of it, pinned to the window's bottom right corner (the
+// window's height sets her size, and a window narrower than `aspect` its width). The rays were drawn
+// to reach across a window V units high, so they are scaled by VH / V about the pearl; the beam was
+// drawn for light mode's view, so in another it is scaled by VH over that one's VH, to look the same.
+function view(mode) {
+  const f = FIGURES[mode]
+  const c = claude(f.name)
   const { u, PX, PY } = c
-  const VH = VIEW_SIZE * u
-  const top = PY + VIEW_FOOT * u - VH
-  const VW = VIEW_ASPECT * VH
-  const left = PX + VIEW_PEARL * u - VW
+  const VH = f.size * u
+  const top = PY + f.foot * u - VH
+  const VW = f.aspect * VH
+  const left = PX + f.pearl * u - VW
   const k = +(VH / V).toFixed(4)
+  const lightVH = FIGURES.light.size * claude(FIGURES.light.name).u
+  const b = +(VH / lightVH).toFixed(4)
+  const about = q => `translate(${PX} ${PY}) scale(${q}) translate(${-PX} ${-PY})`
   return {
+    f,
     c,
     // the window's points, at 900 high, in the box's units
     pt: v => (v * VH) / 900,
     BOX: `width="100%" height="100%" viewBox="${n(left)} ${n(top)} ${n(VW)} ${n(VH)}" preserveAspectRatio="xMaxYMax meet"`,
-    RAYS: ` transform="translate(${PX} ${PY}) scale(${k}) translate(${-PX} ${-PY})"`,
+    RAYS: ` transform="${about(k)}"`,
+    BEAM: b === 1 ? '' : ` transform="${about(b)}"`,
+    b,
+    // light mode's ids stay as they were; dark mode's carry a suffix, as both are in one scene
+    id: mode === 'light' ? '' : '-d',
   }
 }
 
 // fig-in lets a phone enlarge her about the window's bottom right corner. Her light and she
-// herself are each drawn in this box, so they sway as one and the beam stays on the pearl.
-const box = (BOX, inner) => sway(SWAY.figure, `<g class="fig-in"><svg ${BOX} overflow="visible">${inner}</svg></g>`)
+// herself are each drawn in this box, so they sway as one and the beam stays on the pearl; "m-"
+// and the mode name it after the one mode that shows it.
+const box = (mode, BOX, inner) => sway(SWAY.figure, `<g class="fig-in"><svg ${BOX} overflow="visible">${inner}</svg></g>`, ` m-${mode}`)
 
-// The style that goes with this layout: the tree's sway runs from rest toward its trunk's corner
-// (top left) and back (see treeLayer), and the phone's enlargement.
-export const LAYOUT_CSS = `.tree-art{transform-origin:0 0}.pt{--o:-1}.fig-in{transform-box:view-box;transform-origin:100% 100%}@media (max-width:700px){.fig-in{transform:scale(${PHONE_ZOOM})}}`
+// The style that goes with this layout: each mode shows its own figure and light (the media query
+// is written as the scene's own, which art/preview.mjs relies on), the tree's sway runs from rest
+// toward its trunk's corner (top left) and back (see treeLayer), and a phone enlarges her.
+export const LAYOUT_CSS = `.m-light{display:none}@media (prefers-color-scheme: light){.m-dark{display:none}.m-light{display:inline}}.tree-art{transform-origin:0 0}.pt{--o:-1}.fig-in{transform-box:view-box;transform-origin:100% 100%}@media (max-width:700px){${Object.keys(FIGURES).map(m => `.m-${m} .fig-in{transform:scale(${FIGURES[m].phone})}`).join('')}}`
 
-// The beam's label sits just under the glare, in the pocket between her raised arm and her head,
-// with its top `up` above the pearl (negative: below it) and `clear` right of it; `wide` is its
-// width. All in the window's points (at 900 high).
+// The beam's label, placed by the view's `label` in the window's points.
 function label({ PX, PY }, pt, { clear, up, wide }) {
   const eq = load('equation')
   return `translate(${n(PX + pt(clear))} ${n(PY - pt(up))}) scale(${+(pt(wide) / eq.width).toFixed(4)})`
@@ -142,59 +166,72 @@ const spindle = (cx, cy, half, thick) =>
 // beam's pale outer band ends in "cap", a half disc that fades outward in every direction (the gauge
 // scales it with the band's width), and a thin horizontal glare across the pearl (part of "beam")
 // lies over the join. The glare breathes with the pearl's star (class "sh", build-scene.mjs).
-export function claudeLight() {
-  const { c, BOX, RAYS } = view()
-  const { PX, PY, R } = c
+// What both modes' lights and figures share, drawn once at the top of the scene and placed by <use>:
+// the pearl's rays, around the origin, and the beam's label, Re(s) = 1/2.
+export function sharedDefs() {
   const rays = []
   for (let i = 0; i < 18; i++) {
     const a0 = (i * 20 - 4) * (Math.PI / 180)
     const a1 = (i * 20 + 6) * (Math.PI / 180)
     const L = 1500
-    rays.push(`<path class="${i % 2 ? 'ray-a' : 'ray-b'}" d="M${PX} ${PY}L${n(PX + Math.cos(a0) * L)} ${n(PY + Math.sin(a0) * L)}L${n(PX + Math.cos(a1) * L)} ${n(PY + Math.sin(a1) * L)}Z"/>`)
+    rays.push(`<path class="${i % 2 ? 'ray-a' : 'ray-b'}" d="M0 0L${n(Math.cos(a0) * L)} ${n(Math.sin(a0) * L)}L${n(Math.cos(a1) * L)} ${n(Math.sin(a1) * L)}Z"/>`)
   }
+  return `<defs><g id="rayset">${rays.join('')}</g><path id="eqpath" d="${load('equation').d}"/></defs>`
+}
+
+export function claudeLight(mode) {
+  const { c, BOX, RAYS, BEAM, id } = view(mode)
+  const { PX, PY, R } = c
   const zeros = []
   for (let i = 0; i < 6; i++) {
     // Each dot is a zero-length line with round ends, so its size is its stroke width, which the
     // gauge sets: the dots grow with the session's context. z0 are the larger dots, z1 the smaller.
     zeros.push(`<path class="zero z${i % 2} rise" d="M${PX} ${n(PY - R - 6 - i * 4)}h0" style="animation-delay:-${n(i * 2.7)}s"/>`)
   }
-  return box(BOX, `<defs>
-<linearGradient id="beam" x1="0" y1="1" x2="0" y2="0"><stop offset="0" class="beam0" stop-opacity="1"/><stop offset=".35" class="beam1" stop-opacity=".85"/><stop offset="1" class="beam1" stop-opacity=".25"/></linearGradient>
-<linearGradient id="beamw" x1="0" y1="1" x2="0" y2="0"><stop offset="0" class="beam1" stop-opacity=".35"/><stop offset="1" class="beam1" stop-opacity="0"/></linearGradient>
-<radialGradient id="cap" gradientUnits="userSpaceOnUse" cx="${PX}" cy="${PY}" r="${CAP}">${CAP_FADE}</radialGradient>
-<radialGradient id="glare"><stop offset="0" class="beam0" stop-opacity="1"/><stop offset=".55" class="beam0" stop-opacity=".8"/><stop offset="1" class="beam1" stop-opacity=".35"/></radialGradient>
-<radialGradient id="flare"><stop offset="0" class="beam0" stop-opacity=".9"/><stop offset=".45" class="beam1" stop-opacity=".5"/><stop offset="1" class="beam1" stop-opacity="0"/></radialGradient>
-<radialGradient id="raysfade"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-<mask id="raymask" maskUnits="userSpaceOnUse" x="-3000" y="-3000" width="7000" height="7000"><circle cx="${PX}" cy="${PY}" r="950" fill="url(#raysfade)"/></mask>
+  return box(mode, BOX, `<defs>
+<linearGradient id="beam${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" class="beam0" stop-opacity="1"/><stop offset=".35" class="beam1" stop-opacity=".85"/><stop offset="1" class="beam1" stop-opacity=".25"/></linearGradient>
+<linearGradient id="beamw${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" class="beam1" stop-opacity=".35"/><stop offset="1" class="beam1" stop-opacity="0"/></linearGradient>
+<radialGradient id="cap${id}" gradientUnits="userSpaceOnUse" cx="${PX}" cy="${PY}" r="${CAP}">${CAP_FADE}</radialGradient>
+<radialGradient id="glare${id}"><stop offset="0" class="beam0" stop-opacity="1"/><stop offset=".55" class="beam0" stop-opacity=".8"/><stop offset="1" class="beam1" stop-opacity=".35"/></radialGradient>
+<radialGradient id="flare${id}"><stop offset="0" class="beam0" stop-opacity=".9"/><stop offset=".45" class="beam1" stop-opacity=".5"/><stop offset="1" class="beam1" stop-opacity="0"/></radialGradient>
+<radialGradient id="raysfade${id}"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<mask id="raymask${id}" maskUnits="userSpaceOnUse" x="-3000" y="-3000" width="7000" height="7000"><circle cx="${PX}" cy="${PY}" r="950" fill="url(#raysfade${id})"/></mask>
 </defs>
-<g${RAYS}><g class="rays"><g mask="url(#raymask)" opacity=".9"><g class="spin" style="animation-duration:240s">${rays.join('')}</g></g></g>
-<path class="cap" style="transform-origin:${PX}px ${PY}px" fill="url(#cap)" d="M${n(PX - CAP)} ${PY}A${CAP} ${CAP} 0 0 0 ${n(PX + CAP)} ${PY}Z"/>
-<g class="beam"><rect class="shimmer" x="${n(PX - 22)}" y="-3000" width="44" height="${n(PY + 3000)}" fill="url(#beamw)"/>
-<rect class="shimmer" x="${n(PX - 4)}" y="-3000" width="8" height="${n(PY + 3000)}" fill="url(#beam)" style="animation-duration:5s"/>
-<g class="sh"><path fill="url(#glare)" d="${spindle(PX, PY, 66, 3.5)}"/></g></g>
-<g class="flare"><ellipse cx="${PX}" cy="${n(PY - 1200)}" rx="95" ry="1300" fill="url(#flare)"/><rect x="${n(PX - 9)}" y="-3000" width="18" height="${n(PY + 3000)}" fill="url(#beam)"/></g>
-<g>${zeros.join('')}</g></g>`)
+<g${RAYS}><g class="rays"><g mask="url(#raymask${id})" opacity=".9"><g class="spin" style="animation-duration:240s"><use href="#rayset" transform="translate(${PX} ${PY})"/></g></g></g>
+<g${BEAM}><path class="cap" style="transform-origin:${PX}px ${PY}px" fill="url(#cap${id})" d="M${n(PX - CAP)} ${PY}A${CAP} ${CAP} 0 0 0 ${n(PX + CAP)} ${PY}Z"/>
+<g class="beam"><rect class="shimmer" x="${n(PX - 22)}" y="-3000" width="44" height="${n(PY + 3000)}" fill="url(#beamw${id})"/>
+<rect class="shimmer" x="${n(PX - 4)}" y="-3000" width="8" height="${n(PY + 3000)}" fill="url(#beam${id})" style="animation-duration:5s"/>
+<g class="sh"><path fill="url(#glare${id})" d="${spindle(PX, PY, 66, 3.5)}"/></g></g>
+<g class="flare"><ellipse cx="${PX}" cy="${n(PY - 1200)}" rx="95" ry="1300" fill="url(#flare${id})"/><rect x="${n(PX - 9)}" y="-3000" width="18" height="${n(PY + 3000)}" fill="url(#beam${id})"/></g>
+<g>${zeros.join('')}</g></g></g>`)
 }
 
-// In front of everything: Claude herself, the beam's label, then the pearl and its glow at her
-// fingertip. The label is Re(s) = 1/2, the equation of the critical line the beam stands for,
-// written in a pen hand by LaTeX and kept as one outline (equation.py), with a thin outline in
-// its own colour for a slightly heavier pen; the gauge brightens it with the beam.
-export function claudeFigure() {
-  const { c, pt, BOX } = view()
+// In front of everything: Claude herself, the beam's label, then the pearl and its glow. The label
+// is Re(s) = 1/2, the equation of the critical line the beam stands for, written in a pen hand by
+// LaTeX and kept as one outline (equation.py), with a thin outline in its own colour for a slightly
+// heavier pen; the gauge brightens it with the beam.
+export function claudeFigure(mode) {
+  const { f, c, pt, BOX, BEAM, b, id } = view(mode)
   const { art, s, x, y, PX, PY, R } = c
-  const EQ = label(c, pt, { clear: 36, up: -12, wide: 108 })
-  const edge = INK_EDGE * art.scale
+  // the beam's foot in front of the clouds: the same beam (as tall, so its shading matches), seen
+  // through a mask that keeps `front` points of it above the pearl, fading out over the top 60%
+  const H = n(pt(f.front ?? 0) / b)
+  const front = f.front
+    ? `<defs><linearGradient id="fade${id}" x1="0" y1="1" x2="0" y2="0"><stop offset=".4" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><mask id="front${id}" maskUnits="userSpaceOnUse" x="${n(PX - 200)}" y="${n(PY - H)}" width="400" height="${H}"><rect x="${n(PX - 200)}" y="${n(PY - H)}" width="400" height="${H}" fill="url(#fade${id})"/></mask></defs>` +
+      `<g${BEAM}><g mask="url(#front${id})"><g class="beam"><rect class="shimmer" x="${n(PX - 22)}" y="-3000" width="44" height="${n(PY + 3000)}" fill="url(#beamw${id})"/><rect class="shimmer" x="${n(PX - 4)}" y="-3000" width="8" height="${n(PY + 3000)}" fill="url(#beam${id})" style="animation-duration:5s"/></g><g class="flare"><rect x="${n(PX - 9)}" y="-3000" width="18" height="${n(PY + 3000)}" fill="url(#beam${id})"/></g></g><g class="beam"><g class="sh"><path fill="url(#glare${id})" d="${spindle(PX, PY, 66, 3.5)}"/></g></g></g>`
+    : ''
+  const EQ = label(c, pt, f.label)
+  const edge = f.edge * art.scale
   const star = (cx, cy, k) =>
     `M${cx} ${n(cy - k)}C${n(cx + 2)} ${n(cy - 2)} ${n(cx + 2)} ${n(cy - 2)} ${n(cx + k)} ${cy}C${n(cx + 2)} ${n(cy + 2)} ${n(cx + 2)} ${n(cy + 2)} ${cx} ${n(cy + k)}C${n(cx - 2)} ${n(cy + 2)} ${n(cx - 2)} ${n(cy + 2)} ${n(cx - k)} ${cy}C${n(cx - 2)} ${n(cy - 2)} ${n(cx - 2)} ${n(cy - 2)} ${cx} ${n(cy - k)}Z`
-  return box(BOX, `<defs>
-<radialGradient id="glow"><stop offset="0" class="glow0" stop-opacity="1"/><stop offset=".18" class="glow1" stop-opacity=".75"/><stop offset=".5" class="glow2" stop-opacity=".22"/><stop offset="1" class="glow2" stop-opacity="0"/></radialGradient>
-</defs>
+  return box(mode, BOX, `<defs>
+<radialGradient id="glow${id}"><stop offset="0" class="glow0" stop-opacity="1"/><stop offset=".18" class="glow1" stop-opacity=".75"/><stop offset=".5" class="glow2" stop-opacity=".22"/><stop offset="1" class="glow2" stop-opacity="0"/></radialGradient>
+</defs>${front}
 <g class="fig" transform="translate(${n(x)} ${n(y)}) scale(${+s.toFixed(4)})">${art.parts ? drawn(art, edge) : paths(art, edge)}</g>
-<path class="eq" transform="${EQ}" d="${load('equation').d}"/>
-<g class="pglow"><circle class="pulse" cx="${PX}" cy="${PY}" r="${n(R * 6)}" fill="url(#glow)"/></g>
+<use class="eq" href="#eqpath" transform="${EQ}"/>
+<g class="pglow"><circle class="pulse" cx="${PX}" cy="${PY}" r="${n(R * f.glow)}" fill="url(#glow${id})"/></g>
 <circle class="pearl" cx="${PX}" cy="${PY}" r="${R}"/>
-<g class="sh"><path class="pearl spin" style="animation-duration:30s" opacity=".9" d="${star(PX, PY, n(R * 2.6))}"/></g>`)
+<g class="sh"><path class="pearl spin" style="animation-duration:30s" opacity=".9" d="${star(PX, PY, n(R * f.star))}"/></g>`)
 }
 
 // The tree is drawn to cover the window from its top left corner, so the bough always runs along

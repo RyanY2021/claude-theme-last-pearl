@@ -40,7 +40,9 @@ const made = makeColors({
   },
 })
 
-// The four message colors go straight into the inputs, after makeColors.
+// The four message colors go straight into the inputs, after makeColors. They color messages where
+// no style rule does (the style in register.tsx names design-system colors instead, which follow dark
+// mode in the desktop app).
 const MESSAGE_COLORS = {
   light: {
     'bg-user-message': '#f1dcbc',

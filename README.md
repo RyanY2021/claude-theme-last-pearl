@@ -39,9 +39,11 @@ mobile apps (a terminal has no backdrop to draw on).
 ## What it does
 
 - **The scene** is drawn behind the conversation, with slow motion: twinkling stars, drifting leaves, a turning
-  sunburst behind the pearl, and the pearl's shine swelling and fading every few seconds. Claude stands large in
-  the bottom right corner, seen from the waist up, her raised arm and the pearl beside the conversation and her hair
-  running on behind it; the tree's trunk rises at the left edge and its bough reaches across the top to her. The
+  sunburst behind the pearl, and the pearl's shine swelling and fading every few seconds. In light mode Claude
+  stands large in the bottom right corner, seen from the waist up, her raised arm and the pearl beside the
+  conversation and her hair running on behind it; in dark mode she sits there facing the conversation, the pearl
+  cupped in her hand in front of her, its beam rising from it. The tree's trunk rises at the left edge and its
+  bough reaches across the top to her. The
   app's panels sit on top of the backdrop and a mod is not told which are open: the side pane covers her while it is
   open, and with the session list open in a narrower window, the conversation's edge reaches her raised arm.
 - **It shows how full the session's context is**, on a scale that is full at 60%.
@@ -100,9 +102,9 @@ is traced or drawn as paths.
 - `hooks/register.tsx` sets the theme (colours, backdrop, message style, sound), draws the backdrop and answers
   `/last-pearl`. `hooks/gauge.ts` turns a context percentage into the style that ripens the fruit and grows the beam.
   `hooks/scene.ts` is generated: the scene, with a marker for the gauge.
-- `art/vector/*.json` hold the figure (GPT's vector drawing of her, from her hand to the skirt, the part the window
-  shows), the traced tree and the outlined label. `art/figure_svg.py` fitted the figure to the scene (with
-  `art/curves.py`), `art/trace.py` traced the tree from its generated picture (neither source is in this
+- `art/vector/*.json` hold the figures (GPT's vector drawings of her: standing, from her hand to the skirt, the part
+  the window shows, for light mode; seated, for dark mode), the traced tree and the outlined label. `art/figure_svg.py` fitted the figures to the scene (with
+  `art/curves.py`), `art/trace.py` traced the tree from its generated picture (none of the sources is in this
   repository), and `art/equation.py` made the label.
 - `node art/build-scene.mjs` composes the scene from those and writes `hooks/scene.ts`, with a preview in
   `art/scene.svg` (`node art/build-scene.mjs 35` draws it at 35% of context).
