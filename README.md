@@ -39,11 +39,11 @@ mobile apps (a terminal has no backdrop to draw on).
 ## What it does
 
 - **The scene** is drawn behind the conversation, with slow motion: twinkling stars, drifting leaves, a turning
-  sunburst behind the pearl. Claude stands large in the bottom right corner, seen from the waist up, her raised arm
-  and the pearl beside the conversation and her hair running on behind it; the tree's trunk rises at the left edge
-  and its bough reaches across the top to her. The app's panels sit on top of the backdrop and a mod is not told
-  which are open: the side pane covers her while it is open, and with the session list open in a narrower window,
-  the conversation's edge reaches her raised arm.
+  sunburst behind the pearl, and the pearl's shine swelling and fading every few seconds. Claude stands large in
+  the bottom right corner, seen from the waist up, her raised arm and the pearl beside the conversation and her hair
+  running on behind it; the tree's trunk rises at the left edge and its bough reaches across the top to her. The
+  app's panels sit on top of the backdrop and a mod is not told which are open: the side pane covers her while it is
+  open, and with the session list open in a narrower window, the conversation's edge reaches her raised arm.
 - **It shows how full the session's context is**, on a scale that is full at 60%.
   - The tree's fruit start pale and unlit and ripen one by one, from the foot of the trunk outward along the bough,
     about 4% of context each. A tree of all-orange, glowing fruit means the context has reached 60%.

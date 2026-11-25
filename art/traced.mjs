@@ -141,7 +141,7 @@ const spindle = (cx, cy, half, thick) =>
 // lies under the dots and stays unseen until the session's context is high. Below the pearl the
 // beam's pale outer band ends in "cap", a half disc that fades outward in every direction (the gauge
 // scales it with the band's width), and a thin horizontal glare across the pearl (part of "beam")
-// lies over the join.
+// lies over the join. The glare breathes with the pearl's star (class "sh", build-scene.mjs).
 export function claudeLight() {
   const { c, BOX, RAYS } = view()
   const { PX, PY, R } = c
@@ -171,7 +171,7 @@ export function claudeLight() {
 <path class="cap" style="transform-origin:${PX}px ${PY}px" fill="url(#cap)" d="M${n(PX - CAP)} ${PY}A${CAP} ${CAP} 0 0 0 ${n(PX + CAP)} ${PY}Z"/>
 <g class="beam"><rect class="shimmer" x="${n(PX - 22)}" y="-3000" width="44" height="${n(PY + 3000)}" fill="url(#beamw)"/>
 <rect class="shimmer" x="${n(PX - 4)}" y="-3000" width="8" height="${n(PY + 3000)}" fill="url(#beam)" style="animation-duration:5s"/>
-<path fill="url(#glare)" d="${spindle(PX, PY, 66, 3.5)}"/></g>
+<g class="sh"><path fill="url(#glare)" d="${spindle(PX, PY, 66, 3.5)}"/></g></g>
 <g class="flare"><ellipse cx="${PX}" cy="${n(PY - 1200)}" rx="95" ry="1300" fill="url(#flare)"/><rect x="${n(PX - 9)}" y="-3000" width="18" height="${n(PY + 3000)}" fill="url(#beam)"/></g>
 <g>${zeros.join('')}</g></g>`)
 }
@@ -194,7 +194,7 @@ export function claudeFigure() {
 <path class="eq" transform="${EQ}" d="${load('equation').d}"/>
 <g class="pglow"><circle class="pulse" cx="${PX}" cy="${PY}" r="${n(R * 6)}" fill="url(#glow)"/></g>
 <circle class="pearl" cx="${PX}" cy="${PY}" r="${R}"/>
-<path class="pearl spin" style="animation-duration:30s" opacity=".9" d="${star(PX, PY, n(R * 2.6))}"/>`)
+<g class="sh"><path class="pearl spin" style="animation-duration:30s" opacity=".9" d="${star(PX, PY, n(R * 2.6))}"/></g>`)
 }
 
 // The tree is drawn to cover the window from its top left corner, so the bough always runs along

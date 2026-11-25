@@ -25,6 +25,10 @@ function rng(seed) {
 const n = v => Math.round(v * 10) / 10
 
 // ---------------------------------------------------------------- style
+// The shine at her fingertip breathes: the pearl's star and the thin glare across it (class "sh")
+// swell and shrink over BREATH seconds, and its glow ("pulse") with them, a little less. The mod
+// times the breath from the clock (shineCss in hooks/register.tsx), so a redraw carries it on.
+const BREATH = 4
 const CSS = `
 .sky0{stop-color:#0b1030}.sky1{stop-color:#151b47}.sky2{stop-color:#272862}
 .star{fill:#f6ecd2}.spark{fill:#fff4d6}
@@ -59,7 +63,8 @@ const CSS = `
 
 .tw{animation:twinkle 6s ease-in-out infinite}
 .t0{animation-duration:4.4s;animation-delay:-1s}.t1{animation-duration:6.1s;animation-delay:-3.5s}.t2{animation-duration:8.3s;animation-delay:-6s}.t3{animation-duration:5.2s;animation-delay:-2.2s}.t4{animation-duration:9.4s;animation-delay:-7.1s}.t5{animation-duration:7s;animation-delay:-4.6s}
-.pulse{transform-box:fill-box;transform-origin:50% 50%;animation:pulse 6s ease-in-out infinite}
+.pulse{transform-box:fill-box;transform-origin:50% 50%;animation:pulse ${BREATH}s ease-in-out infinite}
+.sh{transform-box:fill-box;transform-origin:50% 50%;animation:shine ${BREATH}s ease-in-out infinite}
 .spin{transform-box:fill-box;transform-origin:50% 50%;animation:spin 40s linear infinite}
 .shimmer{animation:shimmer 7s ease-in-out infinite}
 .rise{animation:rise 16s linear infinite}
@@ -69,7 +74,8 @@ const CSS = `
 .fall{animation:fall 26s linear infinite}
 .par{animation:par 24s ease-in-out infinite alternate}
 @keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35}}
-@keyframes pulse{0%,100%{transform:scale(.94);opacity:.8}50%{transform:scale(1.06);opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(.86);opacity:.75}50%{transform:scale(1.14);opacity:1}}
+@keyframes shine{0%,100%{transform:scale(.72);opacity:.7}50%{transform:scale(1.3);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shimmer{0%,100%{opacity:.75}50%{opacity:1}}
 @keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:1}85%{opacity:1}100%{transform:translateY(-900px);opacity:0}}
@@ -185,12 +191,13 @@ ${drifting()}
 const FRUIT = fruitCount()
 const fill = percent => template.split('@@GAUGE@@').join(gaugeCss(percent, FRUIT))
 
-const SWAY_ROOM = '.par{--p:0.25;animation-delay:-47.9s}'.length
+const SWAY_ROOM = '.par{--p:0.25;animation-delay:-47.9s}.sh,.pulse{animation-delay:-3.9s}'.length
 
 // The preview, at the context level given on the command line (default 100, the scene at its fullest).
 const level = process.argv[2] === undefined ? 100 : Number(process.argv[2])
 // the longest the scene gets is with every fruit named in the gauge's style, and the style the mod
-// adds for the parallax's strength and phase (swayCss in hooks/register.tsx; SWAY_ROOM is its longest)
+// adds for the parallax's strength and phase and the shine's phase (swayCss and shineCss in
+// hooks/register.tsx; SWAY_ROOM is their longest)
 const longest = Math.max(fill(100).length, fill(99).length) + SWAY_ROOM
 if (fill(100).includes('@@')) throw new Error('a marker is left unfilled')
 if (longest > 131072) throw new Error(`the scene reaches ${longest} characters; the app takes at most 131,072`)

@@ -97,6 +97,14 @@ function swayCss(strength: number, nowMs: number): string {
   return `.par{${strength === 1 ? '' : `--p:${strength};`}animation-delay:-${into}s}`
 }
 
+// The shine at her fingertip breathes over BREATH_MS (the "sh" and "pulse" animations; BREATH in
+// art/build-scene.mjs). Timed from the clock for the same reason as the swing, so a redraw after a
+// turn carries the breath on instead of starting it again from its smallest.
+const BREATH_MS = 4_000
+function shineCss(nowMs: number): string {
+  return `.sh,.pulse{animation-delay:-${((nowMs % BREATH_MS) / 1000).toFixed(1)}s}`
+}
+
 // What the scene was last drawn from on each surface, and the moment its swing was timed at. A
 // redraw asked for with nothing changed gets the same text back, so the app has nothing to draw afresh.
 const drawn = new Map<string, { key: string; at: number }>()
@@ -259,6 +267,6 @@ export const register: Register = on => {
       drawn.set(e.surface, timed)
     }
     const { Svg } = $.ui.resolve(e)
-    return <Svg source={scene(gauge + swayCss(parallax, timed.at))} alt={ALT} isInteractive />
+    return <Svg source={scene(gauge + swayCss(parallax, timed.at) + shineCss(timed.at))} alt={ALT} isInteractive />
   })
 }
